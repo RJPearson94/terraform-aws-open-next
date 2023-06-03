@@ -11,6 +11,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      
+      - name: Use Node.js node 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
 
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v3
