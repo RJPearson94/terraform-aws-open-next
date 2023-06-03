@@ -20,4 +20,4 @@ jobs:
             @semantic-release/git@10.0.1
             @semantic-release/github@8.1.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
