@@ -14,33 +14,7 @@ The script to invalidate the CloudFront distribution used bash and [jq](https://
 
 ## Examples
 
-Examples of how the Terraform module can be used can be found [here](./examples)
-
-To be able to run the examples, you will need to install the dependencies and build the websites using open-next. 
-
-**NOTE:** You will need node 18 or above installed to build the applications
-
-For the multi-zone website please run the following commands
-
-```shell
-cd examples/multi-zone/docs
-yarn install
-yarn build:open-next
-
-...
-
-cd ../home
-yarn install
-yarn build:open-next
-```
-
-For the single-zone website please run the following commands
-
-```shell
-cd examples/single-zone
-yarn install
-yarn build:open-next
-```
+To keep reduce the amount of code that is downloaded by Terraform, the examples are stored in the [terraform-aws-open-next-examples repo](https://github.com/RJPearson94/terraform-aws-open-next-examples)
 
 ## Module documentation
 
