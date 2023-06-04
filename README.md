@@ -63,6 +63,8 @@ Below is the documentation for the Terraform module, outline the providers, modu
 | <a name="provider_archive"></a> [archive](#provider\_archive) | >= 2.3.0 |
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.67.0 |
 | <a name="provider_aws.dns"></a> [aws.dns](#provider\_aws.dns) | >= 4.67.0 |
+| <a name="provider_aws.server_function"></a> [aws.server_function](#provider\_aws.server_function) | >= 4.67.0 |
+| <a name="provider_aws.iam"></a> [aws.iam](#provider\_aws.iam) | >= 4.67.0 |
 | <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 
 ### Modules
