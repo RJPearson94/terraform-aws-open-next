@@ -18,7 +18,7 @@ Examples of how the Terraform module can be used can be found [here](./examples)
 
 To be able to run the examples, you will need to install the dependencies and build the websites using open-next. 
 
-**NOTE:** You will need node v18 or above installed to build the applications
+**NOTE:** You will need node 18 or above installed to build the applications
 
 For the multi-zone website please run the following commands
 
