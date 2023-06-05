@@ -1,8 +1,8 @@
 # Open Next Terraform
 
-This module is used to deploy a next.js website using [Open Next](https://github.com/serverless-stack/open-next) to AWS utilising lambda, S3 and CloudFront.
+This module deploys a next.js website using [Open Next](https://github.com/serverless-stack/open-next) to AWS utilising lambda, S3 and CloudFront.
 
-This module will build the corresponding resources to host the single-zone or multi-zone website, there are a number of options to deploy the backend. The options are:
+This module will build the corresponding resources to host the single-zone or multi-zone website; several options exist to deploy the backend. The options are:
 
 - Lambda function URLs (with no auth)
 - HTTP API Gateway (with proxy integrations to lambda functions)
@@ -10,17 +10,41 @@ This module will build the corresponding resources to host the single-zone or mu
 
 **NOTE:** If lambda@edge is used, then the warmer function is not deployed
 
-The script to invalidate the CloudFront distribution used bash and [jq](https://github.com/jqlang/jq). The invalidation script and Terraform apply will fail if the script fails to run.
+The script to invalidate the CloudFront distribution uses bash, [AWS CLI](https://aws.amazon.com/cli/) and [jq](https://github.com/jqlang/jq). The invalidation script and Terraform apply will fail if the script fails to run.
+
+The module is available in the [Terraform registry](https://registry.terraform.io/modules/RJPearson94/open-next/aws/latest)
 
 ## Examples
 
-To keep reduce the amount of code that is downloaded by Terraform, the examples are stored in the [terraform-aws-open-next-examples repo](https://github.com/RJPearson94/terraform-aws-open-next-examples)
+The examples have been moved to a separate repository to reduce the amount of code that Terraform downloads. You can find them at [terraform-aws-open-next-examples repo](https://github.com/RJPearson94/terraform-aws-open-next-examples)
 
 ## Module documentation
 
-Below is the documentation for the Terraform module, outline the providers, modules and resources that are used. The documentation includes the inputs that can be supplied (including any defaults) and what is returned from the module
+Below is the documentation for the Terraform module, outlining the providers, modules and resources required to deploy the website. The documentation includes the inputs that can be supplied (including any defaults) and what is outputted from the module.
 
-**NOTE:** The module will zip all the necessary open-next artifacts as part of a Terraform deploy. To facilitate this the .open-next folders need to be stored locally.
+**NOTE:** The module will zip all the necessary open-next artefacts as part of a Terraform deployment. To facilitate this, the .open-next folders need to be stored locally.
+
+You must configure the AWS providers four times because some organisations use different accounts or roles for IAM, DNS, etc. The module has been designed to cater for these requirements. The server function is a separate provider to allow your backend resources to be deployed to a region, i.e. eu-west-1, and deploy the server function to another region, i.e. us-east-1, for lambda@edge. 
+
+Below is an example setup.
+
+```tf
+provider "aws" {
+  
+}
+
+provider "aws" {
+  alias = "server_function"
+}
+
+provider "aws" {
+  alias = "iam"
+}
+
+provider "aws" {
+  alias = "dns"
+}
+```
 
 ### Requirements
 
@@ -80,17 +104,17 @@ Below is the documentation for the Terraform module, outline the providers, modu
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | <a name="input_cache_control_immutable_assets_regex"></a> [cache\_control\_immutable\_assets\_regex](#input\_cache\_control\_immutable\_assets\_regex) | Regex to set public,max-age=31536000,immutable on immutable resources | `string` | `"^.*(\\.js|\\.css|\\.woff2)$"` | no |
-| <a name="input_cloudfront"></a> [cloudfront](#input\_cloudfront) | Configuration for the cloudfront distribution | <pre>object({<br>    enabled                  = optional(bool, true)<br>    invalidate_on_change     = optional(bool, true)<br>    minimum_protocol_version = optional(string, "TLSv1.2_2021")<br>    ssl_support_method       = optional(string, "sni-only")<br>    http_version             = optional(string, "http2and3")<br>    ipv6_enabled             = optional(bool, true)<br>    price_class              = optional(string, "PriceClass_100")<br>    geo_restrictions = optional(object({<br>      type      = optional(string, "none"),<br>      locations = optional(list(string), [])<br>    }), {})<br>  })</pre> | `{}` | no |
+| <a name="input_cloudfront"></a> [cloudfront](#input\_cloudfront) | Configuration for the CloudFront distribution | <pre>object({<br>    enabled                  = optional(bool, true)<br>    invalidate_on_change     = optional(bool, true)<br>    minimum_protocol_version = optional(string, "TLSv1.2_2021")<br>    ssl_support_method       = optional(string, "sni-only")<br>    http_version             = optional(string, "http2and3")<br>    ipv6_enabled             = optional(bool, true)<br>    price_class              = optional(string, "PriceClass_100")<br>    geo_restrictions = optional(object({<br>      type      = optional(string, "none"),<br>      locations = optional(list(string), [])<br>    }), {})<br>  })</pre> | `{}` | no |
 | <a name="input_cloudwatch_log"></a> [cloudwatch\_log](#input\_cloudwatch\_log) | Override the Cloudwatch logs configuration | <pre>object({<br>    retention_in_days = number<br>  })</pre> | <pre>{<br>  "retention_in_days": 7<br>}</pre> | no |
-| <a name="input_content_types"></a> [content\_types](#input\_content\_types) | The MIME type mapping and default for artifacts generated by Open Next | <pre>object({<br>    mapping = optional(map(string), {<br>      "svg" = "image/svg+xml",<br>      "js"  = "application/javascript",<br>      "css" = "text/css",<br>    })<br>    default = optional(string, "binary/octet-stream")<br>  })</pre> | `{}` | no |
-| <a name="input_domain"></a> [domain](#input\_domain) | Configuration to for attaching a custom domain to the cloudfront distribution | <pre>object({<br>    create                 = optional(bool, false)<br>    hosted_zone_name       = optional(string),<br>    name                   = optional(string),<br>    alternate_names        = optional(list(string), [])<br>    acm_certificate_arn    = optional(string),<br>    evaluate_target_health = optional(bool, false)<br>  })</pre> | `{}` | no |
+| <a name="input_content_types"></a> [content\_types](#input\_content\_types) | The MIME type mapping and default for artefacts generated by Open Next | <pre>object({<br>    mapping = optional(map(string), {<br>      "svg" = "image/svg+xml",<br>      "js"  = "application/javascript",<br>      "css" = "text/css",<br>    })<br>    default = optional(string, "binary/octet-stream")<br>  })</pre> | `{}` | no |
+| <a name="input_domain"></a> [domain](#input\_domain) | Configuration to for attaching a custom domain to the CloudFront distribution | <pre>object({<br>    create                 = optional(bool, false)<br>    hosted_zone_name       = optional(string),<br>    name                   = optional(string),<br>    alternate_names        = optional(list(string), [])<br>    acm_certificate_arn    = optional(string),<br>    evaluate_target_health = optional(bool, false)<br>  })</pre> | `{}` | no |
 | <a name="input_iam"></a> [iam](#input\_iam) | Override the default IAM configuration | <pre>object({<br>    path                 = optional(string, "/")<br>    permissions_boundary = optional(string)<br>  })</pre> | `{}` | no |
 | <a name="input_image_optimisation_function"></a> [image\_optimisation\_function](#input\_image\_optimisation\_function) | Configuration for the image optimisation function | <pre>object({<br>    runtime     = optional(string, "nodejs18.x")<br>    deployment  = optional(string, "REGIONAL_LAMBDA")<br>    timeout     = optional(number, 25)<br>    memory_size = optional(number, 1536)<br>  })</pre> | `{}` | no |
 | <a name="input_open_next"></a> [open\_next](#input\_open\_next) | The next.js website config for single and multi-zone deployments | <pre>object({<br>    exclusion_regex  = optional(string)<br>    root_folder_path = string<br>    additional_zones = optional(list(object({<br>      name        = string<br>      http_path   = string<br>      folder_path = string<br>    })), [])<br>  })</pre> | n/a | yes |
-| <a name="input_preferred_architecture"></a> [preferred\_architecture](#input\_preferred\_architecture) | Preferred instruction set architecture for the lambda function. If lambda@edge is used for the server function the architecture will be set to x86_64 for that function | `string` | `"arm64"` | no |
-| <a name="input_prefix"></a> [prefix](#input\_prefix) | A prefix which will be attached to resource name to esnure resources are random | `string` | `null` | no |
+| <a name="input_preferred_architecture"></a> [preferred\_architecture](#input\_preferred\_architecture) | Preferred instruction set architecture for the lambda function. If lambda@edge is used for the server function, the architecture will be set to x86_64 for that function | `string` | `"arm64"` | no |
+| <a name="input_prefix"></a> [prefix](#input\_prefix) | A prefix which will be attached to resource name to ensure resources are random | `string` | `null` | no |
 | <a name="input_server_function"></a> [server\_function](#input\_server\_function) | Configuration for the server function | <pre>object({<br>    runtime     = optional(string, "nodejs18.x")<br>    deployment  = optional(string, "REGIONAL_LAMBDA")<br>    timeout     = optional(number, 10)<br>    memory_size = optional(number, 1024)<br>  })</pre> | `{}` | no |
-| <a name="input_suffix"></a> [suffix](#input\_suffix) | A suffix which will be attached to resource name to esnure resources are random | `string` | `null` | no |
+| <a name="input_suffix"></a> [suffix](#input\_suffix) | A suffix which will be attached to the resource name to ensure resources are random | `string` | `null` | no |
 | <a name="input_warmer_function"></a> [warmer\_function](#input\_warmer\_function) | Configuration for the warmer function | <pre>object({<br>    create      = bool<br>    runtime     = optional(string, "nodejs18.x")<br>    concurrency = optional(number, 20)<br>    timeout     = optional(number, 15 * 60) // 15 minutes<br>    memory_size = optional(number, 1024)<br>    schedule    = optional(string, "rate(5 minutes)")<br>  })</pre> | <pre>{<br>  "create": false<br>}</pre> | no |
 
 ### Outputs
