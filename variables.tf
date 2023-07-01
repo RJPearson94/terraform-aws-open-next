@@ -144,3 +144,20 @@ variable "image_optimisation_function" {
     error_message = "The image optimisation function deployment can be either API_GATEWAY or REGIONAL_LAMBDA"
   }
 }
+
+
+variable "isr" {
+  description = "Configuration for ISR, including creation and function config. To use ISR you need to use at least 2.x of Open Next, for 1.x please set create to false"
+  type = object({
+    create      = bool
+    revalidation_function = optional(object({
+      runtime     = optional(string, "nodejs18.x")
+      deployment  = optional(string, "REGIONAL_LAMBDA")
+      timeout     = optional(number, 30)
+      memory_size = optional(number, 128)
+    }), {})
+  })
+  default = {
+    create = true
+  }
+}

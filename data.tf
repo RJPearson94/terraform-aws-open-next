@@ -1,3 +1,5 @@
+data "aws_region" "current" {}
+
 # CloudFront
 
 data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header" {
@@ -33,8 +35,15 @@ data "archive_file" "image_optimization_function" {
 }
 
 data "archive_file" "warmer_function" {
-  for_each    = local.zones_set
+  for_each    = local.should_create_warmer_function ? local.zones_set : []
   type        = "zip"
   output_path = "${local.zones_map[each.value].folder_path}/warmer-function.zip"
   source_dir  = "${local.zones_map[each.value].folder_path}/warmer-function"
+}
+
+data "archive_file" "revalidation_function" {
+  for_each    = local.should_create_revalidation_resources ? local.zones_set : []
+  type        = "zip"
+  output_path = "${local.zones_map[each.value].folder_path}/revalidation-function.zip"
+  source_dir  = "${local.zones_map[each.value].folder_path}/revalidation-function"
 }

@@ -29,6 +29,18 @@ locals {
       hash   = filesha1("${local.assets_folders[name]}/${file}")
   }]])
 
+  cache_folders = {
+    for name, zone in local.zones_map : name => "${zone.folder_path}/cache"
+  }
+  cache_assets = flatten([
+    for name, zone in local.zones_map :
+    [for file in toset([for file in fileset(local.cache_folders[name], "**") : file if var.open_next.exclusion_regex != null ? length(regexall(var.open_next.exclusion_regex, file)) == 0 : true]) : {
+      prefix = name == local.root ? "" : "${local.zones_map[name].http_path}/"
+      zone   = zone
+      file   = file
+      hash   = filesha1("${local.cache_folders[name]}/${file}")
+  }]])
+
   prefix = var.prefix == null ? "" : "${var.prefix}-"
   suffix = var.suffix == null ? "" : "-${var.suffix}"
 
@@ -54,6 +66,9 @@ locals {
   server_backend_use_api_gateway      = var.server_function.deployment == local.backend_type_api_gateway
   server_backend_use_edge_lambda      = var.server_function.deployment == local.backend_type_edge_lambda
   should_create_api_gateway_resources = local.image_optimisation_use_api_gateway || local.server_backend_use_api_gateway
+
+  should_create_warmer_function        = var.warmer_function.create == true && local.server_backend_use_edge_lambda == false
+  should_create_revalidation_resources = var.isr.create == true
 }
 
 # S3
@@ -100,6 +115,19 @@ resource "aws_s3_object" "website_asset" {
   content_type  = lookup(var.content_types.mapping, reverse(split(".", each.value.file))[0], var.content_types.default)
 }
 
+resource "aws_s3_object" "cache_asset" {
+  for_each = {
+    for asset in local.cache_assets : "${asset.zone.name}-${asset.file}" => asset
+  }
+
+  bucket = aws_s3_bucket.website_bucket.bucket
+  key    = "${each.value.prefix}/_cache/${each.value.file}"
+  source = "${local.cache_folders[each.value.zone.name]}/${each.value.file}"
+  etag   = filemd5("${local.cache_folders[each.value.zone.name]}/${each.value.file}")
+
+  content_type  = lookup(var.content_types.mapping, reverse(split(".", each.value.file))[0], var.content_types.default)
+}
+
 # Server Function
 
 module "server_function" {
@@ -116,7 +144,7 @@ module "server_function" {
   memory_size = var.server_function.memory_size
   timeout     = var.server_function.timeout
 
-  iam_policy_statements = [
+  iam_policy_statements = concat([
     {
       "Action" : [
         "s3:GetObject*",
@@ -135,8 +163,22 @@ module "server_function" {
         "${aws_s3_bucket.website_bucket.arn}/*"
       ],
       "Effect" : "Allow"
-    }
-  ]
+    },
+    ], local.should_create_revalidation_resources ? [{
+      "Action" : [
+        "sqs:SendMessage"
+      ],
+      "Resource" : aws_sqs_queue.revalidation_queue[each.value].arn,
+      "Effect" : "Allow"
+  }] : [])
+
+  environment_variables = local.should_create_revalidation_resources ? {
+    "CACHE_BUCKET_NAME" : aws_s3_bucket.website_bucket.id,
+    "CACHE_BUCKET_KEY_PREFIX" : "${each.value == local.root ? "" : "${each.value}/"}_cache",
+    "CACHE_BUCKET_REGION" : data.aws_region.current.name,
+    "REINVALIDATION_QUEUE_URL" : aws_sqs_queue.revalidation_queue[each.value].url,
+    "REINVALIDATION_QUEUE_REGION" : data.aws_region.current.name,
+  } : {}
 
   architecture = local.server_backend_use_edge_lambda ? "x86_64" : var.preferred_architecture
 
@@ -207,7 +249,7 @@ module "image_optimisation_function" {
 # Warmer Function
 
 module "warmer_function" {
-  for_each = var.warmer_function.create == true && local.server_backend_use_edge_lambda == false ? local.zones_set : []
+  for_each = local.should_create_warmer_function ? local.zones_set : []
   source   = "./modules/tf-aws-scheduled-lambda"
 
   function_name = "${each.value == local.root ? "" : "${each.value}-"}warmer-function"
@@ -248,6 +290,64 @@ module "warmer_function" {
   providers = {
     aws.iam = aws.iam
   }
+}
+
+# Revalidation Function
+
+module "revalidation_function" {
+  for_each = local.should_create_revalidation_resources ? local.zones_set : []
+  source   = "./modules/tf-aws-lambda"
+
+  function_name = "${each.value == local.root ? "" : "${each.value}-"}revalidation-function"
+  zip_file      = data.archive_file.revalidation_function[each.value].output_path
+  hash          = data.archive_file.revalidation_function[each.value].output_base64sha256
+
+  runtime = var.isr.revalidation_function.runtime
+  handler = "index.handler"
+
+  memory_size = var.isr.revalidation_function.memory_size
+  timeout     = var.isr.revalidation_function.timeout
+
+  iam_policy_statements = [
+    {
+      "Action" : [
+        "sqs:ReceiveMessage",
+        "sqs:ChangeMessageVisibility",
+        "sqs:GetQueueUrl",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes"
+      ],
+      "Resource" : aws_sqs_queue.revalidation_queue[each.value].arn,
+      "Effect" : "Allow"
+    }
+  ]
+
+  architecture = var.preferred_architecture
+
+  iam            = var.iam
+  cloudwatch_log = var.cloudwatch_log
+
+  prefix = local.prefix
+  suffix = local.suffix
+
+  providers = {
+    aws.iam = aws.iam
+  }
+}
+
+# SQS
+
+resource "aws_sqs_queue" "revalidation_queue" {
+  for_each                    = local.should_create_revalidation_resources ? local.zones_set : []
+  name                        = "${local.prefix}${each.value == local.root ? "" : "${each.value}-"}isr-queue${local.suffix}.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+}
+
+resource "aws_lambda_event_source_mapping" "revalidation_queue_source" {
+  for_each         = local.should_create_revalidation_resources ? local.zones_set : []
+  event_source_arn = aws_sqs_queue.revalidation_queue[each.value].arn
+  function_name    = module.revalidation_function[each.value].function_arn
 }
 
 # API Gateway
@@ -713,7 +813,7 @@ resource "aws_cloudfront_distribution" "website_distribution" {
 
   aliases = local.aliases
 
-  depends_on = [aws_s3_object.website_asset]
+  depends_on = [aws_s3_object.website_asset, aws_s3_object.cache_asset]
 }
 
 # Invalidate Distribution
