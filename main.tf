@@ -125,7 +125,7 @@ resource "aws_s3_object" "cache_asset" {
   source = "${local.cache_folders[each.value.zone.name]}/${each.value.file}"
   etag   = filemd5("${local.cache_folders[each.value.zone.name]}/${each.value.file}")
 
-  content_type  = lookup(var.content_types.mapping, reverse(split(".", each.value.file))[0], var.content_types.default)
+  content_type = lookup(var.content_types.mapping, reverse(split(".", each.value.file))[0], var.content_types.default)
 }
 
 # Server Function
@@ -144,6 +144,7 @@ module "server_function" {
   memory_size = var.server_function.memory_size
   timeout     = var.server_function.timeout
 
+  additional_iam_policies = var.server_function.additional_iam_policies
   iam_policy_statements = concat([
     {
       "Action" : [
@@ -172,18 +173,20 @@ module "server_function" {
       "Effect" : "Allow"
   }] : [])
 
-  environment_variables = local.should_create_revalidation_resources ? {
+  environment_variables = merge(local.should_create_revalidation_resources ? {
     "CACHE_BUCKET_NAME" : aws_s3_bucket.website_bucket.id,
     "CACHE_BUCKET_KEY_PREFIX" : "${each.value == local.root ? "" : "${each.value}/"}_cache",
     "CACHE_BUCKET_REGION" : data.aws_region.current.name,
     "REINVALIDATION_QUEUE_URL" : aws_sqs_queue.revalidation_queue[each.value].url,
     "REINVALIDATION_QUEUE_REGION" : data.aws_region.current.name,
-  } : {}
+  } : {}, var.server_function.additional_environment_variables)
 
   architecture = local.server_backend_use_edge_lambda ? "x86_64" : var.preferred_architecture
 
   iam            = var.iam
   cloudwatch_log = var.cloudwatch_log
+
+  vpc = var.server_function.vpc != null ? var.server_function.vpc : var.vpc
 
   prefix = local.prefix
   suffix = local.suffix
@@ -215,10 +218,11 @@ module "image_optimisation_function" {
   memory_size = var.image_optimisation_function.memory_size
   timeout     = var.image_optimisation_function.timeout
 
-  environment_variables = {
+  environment_variables = merge({
     "BUCKET_NAME" = aws_s3_bucket.website_bucket.id
-  }
+  }, var.image_optimisation_function.additional_environment_variables)
 
+  additional_iam_policies = var.image_optimisation_function.additional_iam_policies
   iam_policy_statements = [
     {
       "Action" : [
@@ -233,6 +237,8 @@ module "image_optimisation_function" {
 
   iam            = var.iam
   cloudwatch_log = var.cloudwatch_log
+
+  vpc = var.image_optimisation_function.vpc != null ? var.image_optimisation_function.vpc : var.vpc
 
   prefix = local.prefix
   suffix = local.suffix
@@ -262,11 +268,12 @@ module "warmer_function" {
   memory_size = var.warmer_function.memory_size
   timeout     = var.warmer_function.timeout
 
-  environment_variables = {
+  environment_variables = merge({
     "FUNCTION_NAME" : module.server_function[each.value].function_name,
     "CONCURRENCY" : var.warmer_function.concurrency,
-  }
+  }, var.warmer_function.additional_environment_variables)
 
+  additional_iam_policies = var.warmer_function.additional_iam_policies
   iam_policy_statements = [
     {
       "Action" : [
@@ -281,6 +288,8 @@ module "warmer_function" {
 
   iam            = var.iam
   cloudwatch_log = var.cloudwatch_log
+
+  vpc = var.warmer_function.vpc != null ? var.warmer_function.vpc : var.vpc
 
   prefix = local.prefix
   suffix = local.suffix
@@ -308,6 +317,9 @@ module "revalidation_function" {
   memory_size = var.isr.revalidation_function.memory_size
   timeout     = var.isr.revalidation_function.timeout
 
+  environment_variables = var.isr.revalidation_function.additional_environment_variables
+
+  additional_iam_policies = var.isr.revalidation_function.additional_iam_policies
   iam_policy_statements = [
     {
       "Action" : [
@@ -326,6 +338,8 @@ module "revalidation_function" {
 
   iam            = var.iam
   cloudwatch_log = var.cloudwatch_log
+
+  vpc = var.isr.revalidation_function.vpc != null ? var.isr.revalidation_function.vpc : var.vpc
 
   prefix = local.prefix
   suffix = local.suffix

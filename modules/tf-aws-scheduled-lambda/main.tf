@@ -15,12 +15,15 @@ module "function" {
 
   environment_variables = var.environment_variables
 
-  iam_policy_statements = var.iam_policy_statements
+  additional_iam_policies = var.additional_iam_policies
+  iam_policy_statements   = var.iam_policy_statements
 
   architecture = var.architecture
 
   iam            = var.iam
   cloudwatch_log = var.cloudwatch_log
+
+  vpc = var.vpc
 
   prefix = var.prefix
   suffix = var.suffix

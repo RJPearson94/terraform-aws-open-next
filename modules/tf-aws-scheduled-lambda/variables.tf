@@ -64,6 +64,25 @@ variable "iam_policy_statements" {
   default     = []
 }
 
+variable "additional_iam_policies" {
+  description = "Specify additional IAM policies to attach to the lambda execution role"
+  type = list(object({
+    name = string,
+    arn  = optional(string)
+    policy = optional(string)
+  }))
+  default = []
+}
+
+variable "vpc" {
+  description = "The configuration to run the lambda in a VPC"
+  type = object({
+    security_group_ids = list(string),
+    subnet_ids         = list(string)
+  })
+  default = null
+}
+
 variable "publish" {
   description = "Whether to publish a new lambda version"
   type        = bool

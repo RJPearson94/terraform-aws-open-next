@@ -64,6 +64,32 @@ variable "iam_policy_statements" {
   default     = []
 }
 
+variable "additional_iam_policies" {
+  description = "Specify additional IAM policies to attach to the lambda execution role"
+  type = list(object({
+    name = string,
+    arn  = optional(string)
+    policy = optional(string)
+  }))
+  default = []
+
+  validation {
+    condition     = alltrue([
+      for additional_iam_policy in var.additional_iam_policies : additional_iam_policy.arn != null || additional_iam_policy.policy != null
+    ])
+    error_message = "Either the ARN or policy must be specified for each additional IAM policy"
+  }
+}
+
+variable "vpc" {
+  description = "The configuration to run the lambda in a VPC"
+  type = object({
+    security_group_ids = list(string),
+    subnet_ids         = list(string)
+  })
+  default = null
+}
+
 variable "publish" {
   description = "Whether to publish a new lambda version"
   type        = bool

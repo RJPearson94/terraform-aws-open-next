@@ -18,6 +18,15 @@ resource "aws_lambda_function" "lambda_function" {
   environment {
     variables = var.environment_variables
   }
+
+  dynamic "vpc_config" {
+    for_each = var.vpc != null ? [var.vpc] : []
+
+    content {
+      security_group_ids = vpc_config.value["security_group_ids"]
+      subnet_ids         = vpc_config.value["subnet_ids"]
+    }
+  }
 }
 
 resource "aws_lambda_function_url" "function_url" {
@@ -89,11 +98,43 @@ resource "aws_iam_policy" "lambda_policy" {
         "Resource" : var.run_at_edge ? "*" : "${one(aws_cloudwatch_log_group.lambda_log_group[*].arn)}:*",
         "Effect" : "Allow"
       }
-    ], var.iam_policy_statements)
+      ],
+      var.vpc != null ? [
+        {
+          "Action" : [
+            "ec2:CreateNetworkInterface",
+            "ec2:DescribeNetworkInterfaces",
+            "ec2:DeleteNetworkInterface",
+            "ec2:AssignPrivateIpAddresses",
+            "ec2:UnassignPrivateIpAddresses"
+          ],
+          "Resource" : "*"
+          "Effect" : "Allow"
+        }
+      ] : [],
+    var.iam_policy_statements)
   })
 }
 
 resource "aws_iam_role_policy_attachment" "policy_attachment" {
   role       = aws_iam_role.lambda_iam.name
   policy_arn = aws_iam_policy.lambda_policy.arn
+}
+
+resource "aws_iam_policy" "additional_policy" {
+  for_each = {
+    for additional_iam_policy in var.additional_iam_policies : additional_iam_policy.name => additional_iam_policy if additional_iam_policy.policy != null
+  }
+  name = "${var.prefix}${var.function_name}-${each.key}${var.suffix}"
+  path = var.iam.path
+
+  policy = each.value.policy
+}
+
+resource "aws_iam_role_policy_attachment" "additional_policy_attachment" {
+  for_each = {
+    for additional_iam_policy in var.additional_iam_policies : additional_iam_policy.name => additional_iam_policy
+  }
+  role       = aws_iam_role.lambda_iam.name
+  policy_arn = each.value.arn != null ? each.value.arn : aws_iam_policy.additional_policy[each.key].arn
 }

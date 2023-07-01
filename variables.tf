@@ -35,6 +35,15 @@ variable "preferred_architecture" {
   default     = "arm64"
 }
 
+variable "vpc" {
+  description = "The default VPC configuration for the lambda resources. This can be overridden for each function"
+  type = object({
+    security_group_ids = list(string),
+    subnet_ids         = list(string)
+  })
+  default = null
+}
+
 variable "open_next" {
   description = "The next.js website config for single and multi-zone deployments"
   type = object({
@@ -107,6 +116,16 @@ variable "warmer_function" {
     timeout     = optional(number, 15 * 60) // 15 minutes
     memory_size = optional(number, 1024)
     schedule    = optional(string, "rate(5 minutes)")
+    additional_environment_variables = optional(map(string), {})
+    additional_iam_policies = optional(list(object({
+      name = string,
+      arn  = optional(string)
+      policy = optional(string)
+    })), [])
+    vpc = optional(object({
+      security_group_ids = list(string),
+      subnet_ids         = list(string)
+    }))
   })
   default = {
     create = false
@@ -120,6 +139,16 @@ variable "server_function" {
     deployment  = optional(string, "REGIONAL_LAMBDA")
     timeout     = optional(number, 10)
     memory_size = optional(number, 1024)
+    additional_environment_variables = optional(map(string), {})
+    additional_iam_policies = optional(list(object({
+      name = string,
+      arn  = optional(string)
+      policy = optional(string)
+    })), [])
+    vpc = optional(object({
+      security_group_ids = list(string),
+      subnet_ids         = list(string)
+    }))
   })
   default = {}
 
@@ -136,6 +165,16 @@ variable "image_optimisation_function" {
     deployment  = optional(string, "REGIONAL_LAMBDA")
     timeout     = optional(number, 25)
     memory_size = optional(number, 1536)
+    additional_environment_variables = optional(map(string), {})
+    additional_iam_policies = optional(list(object({
+      name = string,
+      arn  = optional(string)
+      policy = optional(string)
+    })), [])
+    vpc = optional(object({
+      security_group_ids = list(string),
+      subnet_ids         = list(string)
+    }))
   })
   default = {}
 
@@ -149,12 +188,22 @@ variable "image_optimisation_function" {
 variable "isr" {
   description = "Configuration for ISR, including creation and function config. To use ISR you need to use at least 2.x of Open Next, for 1.x please set create to false"
   type = object({
-    create      = bool
+    create = bool
     revalidation_function = optional(object({
       runtime     = optional(string, "nodejs18.x")
       deployment  = optional(string, "REGIONAL_LAMBDA")
       timeout     = optional(number, 30)
       memory_size = optional(number, 128)
+      additional_environment_variables = optional(map(string), {})
+      additional_iam_policies = optional(list(object({
+        name = string,
+        arn  = optional(string)
+        policy = optional(string)
+      })), [])
+      vpc = optional(object({
+        security_group_ids = list(string),
+        subnet_ids         = list(string)
+      }))
     }), {})
   })
   default = {
