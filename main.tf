@@ -177,8 +177,8 @@ module "server_function" {
     "CACHE_BUCKET_NAME" : aws_s3_bucket.website_bucket.id,
     "CACHE_BUCKET_KEY_PREFIX" : "${each.value == local.root ? "" : "${each.value}/"}_cache",
     "CACHE_BUCKET_REGION" : data.aws_region.current.name,
-    "REINVALIDATION_QUEUE_URL" : aws_sqs_queue.revalidation_queue[each.value].url,
-    "REINVALIDATION_QUEUE_REGION" : data.aws_region.current.name,
+    "REVALIDATION_QUEUE_URL" : aws_sqs_queue.revalidation_queue[each.value].url,
+    "REVALIDATION_QUEUE_REGION" : data.aws_region.current.name,
   } : {}, var.server_function.additional_environment_variables)
 
   architecture = local.server_backend_use_edge_lambda ? "x86_64" : var.preferred_architecture
