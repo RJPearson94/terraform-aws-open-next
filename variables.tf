@@ -110,16 +110,16 @@ variable "cloudfront" {
 variable "warmer_function" {
   description = "Configuration for the warmer function"
   type = object({
-    create      = bool
-    runtime     = optional(string, "nodejs18.x")
-    concurrency = optional(number, 20)
-    timeout     = optional(number, 15 * 60) // 15 minutes
-    memory_size = optional(number, 1024)
-    schedule    = optional(string, "rate(5 minutes)")
+    create                           = bool
+    runtime                          = optional(string, "nodejs18.x")
+    concurrency                      = optional(number, 20)
+    timeout                          = optional(number, 15 * 60) // 15 minutes
+    memory_size                      = optional(number, 1024)
+    schedule                         = optional(string, "rate(5 minutes)")
     additional_environment_variables = optional(map(string), {})
     additional_iam_policies = optional(list(object({
-      name = string,
-      arn  = optional(string)
+      name   = string,
+      arn    = optional(string)
       policy = optional(string)
     })), [])
     vpc = optional(object({
@@ -135,14 +135,14 @@ variable "warmer_function" {
 variable "server_function" {
   description = "Configuration for the server function"
   type = object({
-    runtime     = optional(string, "nodejs18.x")
-    deployment  = optional(string, "REGIONAL_LAMBDA")
-    timeout     = optional(number, 10)
-    memory_size = optional(number, 1024)
+    runtime                          = optional(string, "nodejs18.x")
+    deployment                       = optional(string, "REGIONAL_LAMBDA")
+    timeout                          = optional(number, 10)
+    memory_size                      = optional(number, 1024)
     additional_environment_variables = optional(map(string), {})
     additional_iam_policies = optional(list(object({
-      name = string,
-      arn  = optional(string)
+      name   = string,
+      arn    = optional(string)
       policy = optional(string)
     })), [])
     vpc = optional(object({
@@ -161,14 +161,14 @@ variable "server_function" {
 variable "image_optimisation_function" {
   description = "Configuration for the image optimisation function"
   type = object({
-    runtime     = optional(string, "nodejs18.x")
-    deployment  = optional(string, "REGIONAL_LAMBDA")
-    timeout     = optional(number, 25)
-    memory_size = optional(number, 1536)
+    runtime                          = optional(string, "nodejs18.x")
+    deployment                       = optional(string, "REGIONAL_LAMBDA")
+    timeout                          = optional(number, 25)
+    memory_size                      = optional(number, 1536)
     additional_environment_variables = optional(map(string), {})
     additional_iam_policies = optional(list(object({
-      name = string,
-      arn  = optional(string)
+      name   = string,
+      arn    = optional(string)
       policy = optional(string)
     })), [])
     vpc = optional(object({
@@ -184,20 +184,19 @@ variable "image_optimisation_function" {
   }
 }
 
-
 variable "isr" {
   description = "Configuration for ISR, including creation and function config. To use ISR you need to use at least 2.x of Open Next, for 1.x please set create to false"
   type = object({
     create = bool
     revalidation_function = optional(object({
-      runtime     = optional(string, "nodejs18.x")
-      deployment  = optional(string, "REGIONAL_LAMBDA")
-      timeout     = optional(number, 30)
-      memory_size = optional(number, 128)
+      runtime                          = optional(string, "nodejs18.x")
+      deployment                       = optional(string, "REGIONAL_LAMBDA")
+      timeout                          = optional(number, 30)
+      memory_size                      = optional(number, 128)
       additional_environment_variables = optional(map(string), {})
       additional_iam_policies = optional(list(object({
-        name = string,
-        arn  = optional(string)
+        name   = string,
+        arn    = optional(string)
         policy = optional(string)
       })), [])
       vpc = optional(object({
@@ -205,6 +204,14 @@ variable "isr" {
         subnet_ids         = list(string)
       }))
     }), {})
+    tag_mapping_db = optional(object({
+      create         = bool
+      billing_mode   = optional(string, "PAY_PER_REQUEST")
+      read_capacity  = optional(number)
+      write_capacity = optional(number)
+      }), {
+      create = true
+    })
   })
   default = {
     create = true

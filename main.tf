@@ -67,8 +67,16 @@ locals {
   server_backend_use_edge_lambda      = var.server_function.deployment == local.backend_type_edge_lambda
   should_create_api_gateway_resources = local.image_optimisation_use_api_gateway || local.server_backend_use_api_gateway
 
-  should_create_warmer_function        = var.warmer_function.create == true && local.server_backend_use_edge_lambda == false
-  should_create_revalidation_resources = var.isr.create == true
+  should_create_warmer_function                    = var.warmer_function.create == true && local.server_backend_use_edge_lambda == false
+  should_create_revalidation_resources             = var.isr.create == true
+  should_create_revalidation_tag_mapping_resources = var.isr.create == true && var.isr.tag_mapping_db.create == true
+
+  tag_mapping_items = local.should_create_revalidation_tag_mapping_resources ? flatten([
+    for name, zone in local.zones_map :
+    fileexists("${zone.folder_path}/dynamodb-provider/dynamodb-cache.json") ? [for tag_mapping in jsondecode(file("${zone.folder_path}/dynamodb-provider/dynamodb-cache.json")) : {
+      zone = zone
+      item = tag_mapping
+  }] : []]) : []
 }
 
 # S3
@@ -165,21 +173,49 @@ module "server_function" {
       ],
       "Effect" : "Allow"
     },
-    ], local.should_create_revalidation_resources ? [{
+    ],
+    local.should_create_revalidation_resources ? [{
       "Action" : [
         "sqs:SendMessage"
       ],
       "Resource" : aws_sqs_queue.revalidation_queue[each.value].arn,
       "Effect" : "Allow"
-  }] : [])
+    }] : [],
+    local.should_create_revalidation_tag_mapping_resources ? [{
+      "Action" : [
+        "dynamodb:BatchGetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+      ],
+      "Resource" : [
+        aws_dynamodb_table.dynamodb_table[each.value].arn,
+        "${aws_dynamodb_table.dynamodb_table[each.value].arn}/index/*"
+      ],
+      "Effect" : "Allow"
+    }] : []
+  )
 
-  environment_variables = merge(local.should_create_revalidation_resources ? {
-    "CACHE_BUCKET_NAME" : aws_s3_bucket.website_bucket.id,
-    "CACHE_BUCKET_KEY_PREFIX" : "${each.value == local.root ? "" : "${each.value}/"}_cache",
-    "CACHE_BUCKET_REGION" : data.aws_region.current.name,
-    "REVALIDATION_QUEUE_URL" : aws_sqs_queue.revalidation_queue[each.value].url,
-    "REVALIDATION_QUEUE_REGION" : data.aws_region.current.name,
-  } : {}, var.server_function.additional_environment_variables)
+  environment_variables = merge(
+    local.should_create_revalidation_resources ? {
+      "CACHE_BUCKET_NAME" : aws_s3_bucket.website_bucket.id,
+      "CACHE_BUCKET_KEY_PREFIX" : "${each.value == local.root ? "" : "${each.value}/"}_cache",
+      "CACHE_BUCKET_REGION" : data.aws_region.current.name,
+      "REVALIDATION_QUEUE_URL" : aws_sqs_queue.revalidation_queue[each.value].url,
+      "REVALIDATION_QUEUE_REGION" : data.aws_region.current.name,
+    } : {},
+    local.should_create_revalidation_tag_mapping_resources ? {
+      "CACHE_DYNAMO_TABLE" : aws_dynamodb_table.dynamodb_table[each.value].name,
+    } : {},
+    var.server_function.additional_environment_variables
+  )
 
   architecture = local.server_backend_use_edge_lambda ? "x86_64" : var.preferred_architecture
 
@@ -362,6 +398,56 @@ resource "aws_lambda_event_source_mapping" "revalidation_queue_source" {
   for_each         = local.should_create_revalidation_resources ? local.zones_set : []
   event_source_arn = aws_sqs_queue.revalidation_queue[each.value].arn
   function_name    = module.revalidation_function[each.value].function_arn
+}
+
+# DynamoDB
+
+resource "aws_dynamodb_table" "dynamodb_table" {
+  for_each = local.should_create_revalidation_tag_mapping_resources ? local.zones_set : []
+  name     = "${local.prefix}${each.value == local.root ? "" : "${each.value}-"}isr-tag-mapping${local.suffix}"
+
+  billing_mode   = var.isr.tag_mapping_db.billing_mode
+  read_capacity  = var.isr.tag_mapping_db.read_capacity
+  write_capacity = var.isr.tag_mapping_db.write_capacity
+
+  hash_key  = "tag"
+  range_key = "path"
+
+  attribute {
+    name = "tag"
+    type = "S"
+  }
+
+  attribute {
+    name = "path"
+    type = "S"
+  }
+
+  attribute {
+    name = "revalidatedAt"
+    type = "N"
+  }
+
+  global_secondary_index {
+    name            = "revalidate"
+    hash_key        = "path"
+    range_key       = "revalidatedAt"
+    projection_type = "ALL"
+    read_capacity   = var.isr.tag_mapping_db.read_capacity
+    write_capacity  = var.isr.tag_mapping_db.write_capacity
+  }
+}
+
+resource "aws_dynamodb_table_item" "isr_table_item" {
+  for_each = {
+    for tag_mapping_item in local.tag_mapping_items : "${tag_mapping_item.zone.name}-${tag_mapping_item.item.tag.S}" => tag_mapping_item
+  }
+
+  table_name = aws_dynamodb_table.dynamodb_table[each.value.zone.name].name
+  hash_key   = aws_dynamodb_table.dynamodb_table[each.value.zone.name].hash_key
+  range_key  = aws_dynamodb_table.dynamodb_table[each.value.zone.name].range_key
+
+  item = jsonencode(each.value.item)
 }
 
 # API Gateway
