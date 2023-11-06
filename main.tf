@@ -82,7 +82,8 @@ locals {
 # S3
 
 resource "aws_s3_bucket" "website_bucket" {
-  bucket = "${local.prefix}website-bucket${local.suffix}"
+  bucket        = "${local.prefix}website-bucket${local.suffix}"
+  force_destroy = var.force_destroy
 }
 
 resource "aws_s3_bucket_policy" "website_bucket_policy" {

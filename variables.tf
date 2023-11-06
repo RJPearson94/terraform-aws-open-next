@@ -10,6 +10,12 @@ variable "suffix" {
   default     = null
 }
 
+variable "force_destroy" {
+  description = "Whether to allow force destruction of resources i.e. website bucket where all objects should be deleted from the bucket when the bucket is destroyed"
+  type        = bool
+  default     = false
+}
+
 variable "iam" {
   description = "Override the default IAM configuration"
   type = object({
