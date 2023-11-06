@@ -699,6 +699,7 @@ resource "aws_cloudfront_distribution" "website_distribution" {
   enabled         = var.cloudfront.enabled
   is_ipv6_enabled = var.cloudfront.ipv6_enabled
   http_version    = var.cloudfront.http_version
+  web_acl_id      = try(var.waf.web_acl_id, null)
 
   dynamic "ordered_cache_behavior" {
     for_each = local.zones_set

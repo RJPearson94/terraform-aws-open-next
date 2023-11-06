@@ -223,3 +223,11 @@ variable "isr" {
     create = true
   }
 }
+
+variable "waf" {
+  description = "Configuration for the CloudFront distribution WAF"
+  type = object({
+    web_acl_id = optional(string)
+  })
+  default = {}
+}
