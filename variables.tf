@@ -132,6 +132,11 @@ variable "warmer_function" {
       security_group_ids = list(string),
       subnet_ids         = list(string)
     }))
+    timeouts = optional(object({
+      create = optional(string)
+      update = optional(string)
+      delete = optional(string)
+    }), {})
   })
   default = {
     create = false
@@ -155,6 +160,11 @@ variable "server_function" {
       security_group_ids = list(string),
       subnet_ids         = list(string)
     }))
+    timeouts = optional(object({
+      create = optional(string)
+      update = optional(string)
+      delete = optional(string)
+    }), {})
   })
   default = {}
 
@@ -181,6 +191,11 @@ variable "image_optimisation_function" {
       security_group_ids = list(string),
       subnet_ids         = list(string)
     }))
+    timeouts = optional(object({
+      create = optional(string)
+      update = optional(string)
+      delete = optional(string)
+    }), {})
   })
   default = {}
 
@@ -209,6 +224,11 @@ variable "isr" {
         security_group_ids = list(string),
         subnet_ids         = list(string)
       }))
+      timeouts = optional(object({
+        create = optional(string)
+        update = optional(string)
+        delete = optional(string)
+      }), {})
     }), {})
     tag_mapping_db = optional(object({
       create         = bool

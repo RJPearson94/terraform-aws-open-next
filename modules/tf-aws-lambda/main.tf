@@ -27,6 +27,12 @@ resource "aws_lambda_function" "lambda_function" {
       subnet_ids         = vpc_config.value["subnet_ids"]
     }
   }
+
+  timeouts {
+    create = try(var.timeouts.create, null)
+    update = try(var.timeouts.update, null)
+    delete = try(var.timeouts.delete, null)
+  }
 }
 
 resource "aws_lambda_function_url" "function_url" {

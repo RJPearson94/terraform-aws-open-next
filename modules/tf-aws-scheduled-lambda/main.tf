@@ -28,6 +28,8 @@ module "function" {
   prefix = var.prefix
   suffix = var.suffix
 
+  timeouts = var.timeouts
+
   providers = {
     aws.iam = aws.iam
   }

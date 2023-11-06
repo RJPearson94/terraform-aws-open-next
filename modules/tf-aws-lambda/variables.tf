@@ -67,14 +67,14 @@ variable "iam_policy_statements" {
 variable "additional_iam_policies" {
   description = "Specify additional IAM policies to attach to the lambda execution role"
   type = list(object({
-    name = string,
-    arn  = optional(string)
+    name   = string,
+    arn    = optional(string)
     policy = optional(string)
   }))
   default = []
 
   validation {
-    condition     = alltrue([
+    condition = alltrue([
       for additional_iam_policy in var.additional_iam_policies : additional_iam_policy.arn != null || additional_iam_policy.policy != null
     ])
     error_message = "Either the ARN or policy must be specified for each additional IAM policy"
@@ -124,4 +124,14 @@ variable "prefix" {
 variable "suffix" {
   description = "A suffix which will be attached to resource name to esnure resources are random"
   type        = string
+}
+
+variable "timeouts" {
+  description = "Define maximum timeout for creating, updating, and deleting function"
+  type = object({
+    create = optional(string)
+    update = optional(string)
+    delete = optional(string)
+  })
+  default = {}
 }

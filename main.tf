@@ -234,6 +234,8 @@ module "server_function" {
     create = var.server_function.deployment == local.backend_type_regional_lambda
   }
 
+  timeouts = var.server_function.timeouts
+
   providers = {
     aws     = aws.server_function
     aws.iam = aws.iam
@@ -284,6 +286,8 @@ module "image_optimisation_function" {
     create = var.image_optimisation_function.deployment == local.backend_type_regional_lambda
   }
 
+  timeouts = var.image_optimisation_function.timeouts
+
   providers = {
     aws.iam = aws.iam
   }
@@ -333,6 +337,8 @@ module "warmer_function" {
 
   schedule = var.warmer_function.schedule
 
+  timeouts = var.warmer_function.timeouts
+
   providers = {
     aws.iam = aws.iam
   }
@@ -380,6 +386,8 @@ module "revalidation_function" {
 
   prefix = local.prefix
   suffix = local.suffix
+
+  timeouts = var.isr.revalidation_function.timeouts
 
   providers = {
     aws.iam = aws.iam
