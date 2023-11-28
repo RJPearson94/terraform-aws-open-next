@@ -2,161 +2,71 @@
 
 This module deploys a next.js website using [Open Next](https://github.com/serverless-stack/open-next) to AWS utilising lambda, S3 and CloudFront.
 
-This module will build the corresponding resources to host the single-zone or multi-zone website; several options exist to deploy the backend. The options are:
+This repo contains modules that let you build single-zone or multi-zone websites.
 
-- Lambda function URLs (with no auth)
-- HTTP API Gateway (with proxy integrations to lambda functions)
-- Lambda@edge (server function only)
+As part of v2 of the module, the monolithic [legacy](./modules/legacy) module was broken down into multiple modules to allow for greater configuration and deployment options. For some workloads, i.e. using open next 1.x or existing workloads, you must use the [legacy](./modules/legacy) module. Please see the [README](./modules/legacy/README.md) in that folder for the installation instructions
 
-**NOTE:** If lambda@edge is used, then the warmer function is not deployed
+If you want to take advantage of some of the new features, such as:
 
-The script to invalidate the CloudFront distribution uses bash, [AWS CLI](https://aws.amazon.com/cli/) and [jq](https://github.com/jqlang/jq). The invalidation script and Terraform apply will fail if the script fails to run.
+- Improved OpenNext 2.x support
+- More deployment and configuration options
+- CloudFront continuous deployments
+  - AWS Developer Guide - https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/continuous-deployment.html
+  - AWS Blog - https://aws.amazon.com/blogs/networking-and-content-delivery/use-cloudfront-continuous-deployment-to-safely-validate-cdn-changes/
+- Lambda function URLs with IAM Auth (using lambda@edge auth function)
+  - AWS Blog - https://aws.amazon.com/blogs/compute/protecting-an-aws-lambda-function-url-with-amazon-cloudfront-and-lambdaedge/
+- WAF
+    - Includes AWS recommended rules (AWSManagedRulesAmazonIpReputationList, AWSManagedRulesCommonRuleSet & AWSManagedRulesKnownBadInputsRuleSet)
+    - Configure multiple IP rate based rules
+    - Configure SQL injection rules
+    - Configure account takeover protection rules
+    - Configure account creation fraud prevention rules
+    - Configure basic auth 
+        - This is inspired by Vercel's password protected deployment feature - https://vercel.com/guides/how-do-i-add-password-protection-to-my-vercel-deployment
+        - Credit to Shinji Nakamatu for this idea - https://dev.to/snaka/implementing-secure-access-control-using-aws-waf-with-ip-address-and-basic-authentication-45hn
+    - Custom rules (with custom response bodies) i.e. add a maintainance page to take the website offline when maintainance is taking place
+        - Credit to Paul L for this idea - https://repost.aws/questions/QUeXIw1g0hSxiF0BpugsT7aw/how-to-implement-the-maintenance-page-using-route-53-to-switch-between-cloudfront-distributions
+- Custom Error Pages
 
-As part of Terraform 2.2 Open Next introduced a DynamoDB for Tag mapping as part of ISR. 
+And more. Then please use 2.x of the module.
 
-If you are using version 2.1 or 2.0, please add the following to your Terraform/ Terragrunt configuration
+*Note:* V2 of the module requires you to use at least v2.0 of the open next library
 
-```tf
-...
+If you only plan on using a single-zone deployment model, please use the [tf-aws-open-next-zone](./modules/tf-aws-open-next-zone) module. If you manage multiple zones in the same terraform state, please use the [tf-aws-open-next-multi-zone](./modules/tf-aws-open-next-multi-zone) module. Installation and module documentation can be found in the corresponding folders.
 
-create = true
-tag_mapping_db = {
-  create = false
-}
-
-...
-```
-
-If you are using 1.x, please add the following to your Terraform/ Terragrunt configuration
-
-```tf
-...
-
-isr = {
-  create = false
-}
-
-...
-```
+Where possible, the modules try to give you as many configuration options as possible; however, the module won't be able to cater for all use cases, so for the majority of components, you can curate your bespoke resources in Terraform, i.e. WAF, CloudFront distribution, etc. and pass the ARN of the resource to the module to use.
 
 The module is available in the [Terraform registry](https://registry.terraform.io/modules/RJPearson94/open-next/aws/latest)
+
+## Deployment options
+
+Below are diagrams of the possible architecture combinations that can configured using v2 of this module. For each of the architectures, the following components are optional:
+
+- Route 53 (A and AAAA records)
+- WAF
+- Staging Distribution
+- Warmer function
+- Image Optimisation function
+- Tag to Path Mapping DB
+
+### Single Zone
+
+![Single Zone Complete](./docs/diagrams/Single%20Zone.png)
+
+### Multi-Zone - Independent Zones
+
+![Multi Zone - Independent Zones](./docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
+
+_Note:_ If you use tools like Terragrunt or CDKTF, you can use the Single Zone module to deploy each zone into its own terraform state
+
+### Multi-Zone - Shared Distribution
+
+![Multi Zone - Shared Distribution](./docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
+
+### Multi-Zone - Shared Distribution and Bucket
+
+![Multi Zone - Shared Distribution](./docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
 
 ## Examples
 
 The examples have been moved to a separate repository to reduce the amount of code that Terraform downloads. You can find them at [terraform-aws-open-next-examples repo](https://github.com/RJPearson94/terraform-aws-open-next-examples)
-
-## Module documentation
-
-Below is the documentation for the Terraform module, outlining the providers, modules and resources required to deploy the website. The documentation includes the inputs that can be supplied (including any defaults) and what is outputted from the module.
-
-**NOTE:** The module will zip all the necessary open-next artefacts as part of a Terraform deployment. To facilitate this, the .open-next folders need to be stored locally.
-
-You must configure the AWS providers four times because some organisations use different accounts or roles for IAM, DNS, etc. The module has been designed to cater for these requirements. The server function is a separate provider to allow your backend resources to be deployed to a region, i.e. eu-west-1, and deploy the server function to another region, i.e. us-east-1, for lambda@edge. 
-
-Below is an example setup.
-
-```tf
-provider "aws" {
-  
-}
-
-provider "aws" {
-  alias = "server_function"
-}
-
-provider "aws" {
-  alias = "iam"
-}
-
-provider "aws" {
-  alias = "dns"
-}
-```
-
-### Requirements
-
-| Name | Version |
-|------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.4.0 |
-| <a name="requirement_archive"></a> [archive](#requirement\_archive) | >= 2.3.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.67.0 |
-
-### Providers
-
-| Name | Version |
-|------|---------|
-| <a name="provider_archive"></a> [archive](#provider\_archive) | >= 2.3.0 |
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.67.0 |
-| <a name="provider_aws.dns"></a> [aws.dns](#provider\_aws.dns) | >= 4.67.0 |
-| <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
-
-### Modules
-
-| Name | Source | Version |
-|------|--------|---------|
-| <a name="module_image_optimisation_function"></a> [image\_optimisation\_function](#module\_image\_optimisation\_function) | ./modules/tf-aws-lambda | n/a |
-| <a name="module_revalidation_function"></a> [revalidation\_function](#module\_revalidation\_function) | ./modules/tf-aws-lambda | n/a |
-| <a name="module_server_function"></a> [server\_function](#module\_server\_function) | ./modules/tf-aws-lambda | n/a |
-| <a name="module_warmer_function"></a> [warmer\_function](#module\_warmer\_function) | ./modules/tf-aws-scheduled-lambda | n/a |
-
-### Resources
-
-| Name | Type |
-|------|------|
-| [aws_apigatewayv2_api.api](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_api) | resource |
-| [aws_apigatewayv2_deployment.deployment](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_deployment) | resource |
-| [aws_apigatewayv2_stage.stable](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/apigatewayv2_stage) | resource |
-| [aws_cloudfront_cache_policy.cache_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_cache_policy) | resource |
-| [aws_cloudfront_distribution.website_distribution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_distribution) | resource |
-| [aws_cloudfront_function.x_forwarded_host](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_function) | resource |
-| [aws_cloudfront_origin_access_control.website_origin_access_control](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudfront_origin_access_control) | resource |
-| [aws_dynamodb_table.dynamodb_table](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table) | resource |
-| [aws_dynamodb_table_item.isr_table_item](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table_item) | resource |
-| [aws_lambda_event_source_mapping.revalidation_queue_source](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_event_source_mapping) | resource |
-| [aws_lambda_permission.image_optimisation_function_permission](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
-| [aws_lambda_permission.server_function_permission](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
-| [aws_route53_record.route53_a_record](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record) | resource |
-| [aws_route53_record.route53_aaaa_record](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record) | resource |
-| [aws_s3_bucket.website_bucket](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket) | resource |
-| [aws_s3_bucket_policy.website_bucket_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_policy) | resource |
-| [aws_s3_object.cache_asset](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_object) | resource |
-| [aws_s3_object.website_asset](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_object) | resource |
-| [aws_sqs_queue.revalidation_queue](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sqs_queue) | resource |
-| terraform_data.invalidate_distribution | resource |
-| [archive_file.image_optimization_function](https://registry.terraform.io/providers/hashicorp/archive/latest/docs/data-sources/file) | data source |
-| [archive_file.revalidation_function](https://registry.terraform.io/providers/hashicorp/archive/latest/docs/data-sources/file) | data source |
-| [archive_file.server_function](https://registry.terraform.io/providers/hashicorp/archive/latest/docs/data-sources/file) | data source |
-| [archive_file.warmer_function](https://registry.terraform.io/providers/hashicorp/archive/latest/docs/data-sources/file) | data source |
-| [aws_cloudfront_cache_policy.caching_optimized](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/cloudfront_cache_policy) | data source |
-| [aws_cloudfront_origin_request_policy.all_viewer_except_host_header](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/cloudfront_origin_request_policy) | data source |
-| [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
-| [aws_route53_zone.hosted_zone](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/route53_zone) | data source |
-
-### Inputs
-
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| <a name="input_cache_control_immutable_assets_regex"></a> [cache\_control\_immutable\_assets\_regex](#input\_cache\_control\_immutable\_assets\_regex) | Regex to set public,max-age=31536000,immutable on immutable resources | `string` | `"^.*(\\.js|\\.css|\\.woff2)$"` | no |
-| <a name="input_cloudfront"></a> [cloudfront](#input\_cloudfront) | Configuration for the CloudFront distribution | <pre>object({<br>    enabled                  = optional(bool, true)<br>    invalidate_on_change     = optional(bool, true)<br>    minimum_protocol_version = optional(string, "TLSv1.2_2021")<br>    ssl_support_method       = optional(string, "sni-only")<br>    http_version             = optional(string, "http2and3")<br>    ipv6_enabled             = optional(bool, true)<br>    price_class              = optional(string, "PriceClass_100")<br>    geo_restrictions = optional(object({<br>      type      = optional(string, "none"),<br>      locations = optional(list(string), [])<br>    }), {})<br>  })</pre> | `{}` | no |
-| <a name="input_cloudwatch_log"></a> [cloudwatch\_log](#input\_cloudwatch\_log) | Override the Cloudwatch logs configuration | <pre>object({<br>    retention_in_days = number<br>  })</pre> | <pre>{<br>  "retention_in_days": 7<br>}</pre> | no |
-| <a name="input_content_types"></a> [content\_types](#input\_content\_types) | The MIME type mapping and default for artefacts generated by Open Next | <pre>object({<br>    mapping = optional(map(string), {<br>      "svg" = "image/svg+xml",<br>      "js"  = "application/javascript",<br>      "css" = "text/css",<br>    })<br>    default = optional(string, "binary/octet-stream")<br>  })</pre> | `{}` | no |
-| <a name="input_domain"></a> [domain](#input\_domain) | Configuration to for attaching a custom domain to the CloudFront distribution | <pre>object({<br>    create                 = optional(bool, false)<br>    hosted_zone_name       = optional(string),<br>    name                   = optional(string),<br>    alternate_names        = optional(list(string), [])<br>    acm_certificate_arn    = optional(string),<br>    evaluate_target_health = optional(bool, false)<br>  })</pre> | `{}` | no |
-| <a name="input_force_destroy"></a> [force\_destroy](#input\_force\_destroy) | Whether to allow force destruction of resources i.e. website bucket where all objects should be deleted from the bucket when the bucket is destroyed | `bool` | `false` | no |
-| <a name="input_iam"></a> [iam](#input\_iam) | Override the default IAM configuration | <pre>object({<br>    path                 = optional(string, "/")<br>    permissions_boundary = optional(string)<br>  })</pre> | `{}` | no |
-| <a name="input_image_optimisation_function"></a> [image\_optimisation\_function](#input\_image\_optimisation\_function) | Configuration for the image optimisation function | <pre>object({<br>    runtime                          = optional(string, "nodejs18.x")<br>    deployment                       = optional(string, "REGIONAL_LAMBDA")<br>    timeout                          = optional(number, 25)<br>    memory_size                      = optional(number, 1536)<br>    additional_environment_variables = optional(map(string), {})<br>    additional_iam_policies = optional(list(object({<br>      name   = string,<br>      arn    = optional(string)<br>      policy = optional(string)<br>    })), [])<br>    vpc = optional(object({<br>      security_group_ids = list(string),<br>      subnet_ids         = list(string)<br>    }))<br>    timeouts = optional(object({<br>      create = optional(string)<br>      update = optional(string)<br>      delete = optional(string)<br>    }), {})<br>  })</pre> | `{}` | no |
-| <a name="input_isr"></a> [isr](#input\_isr) | Configuration for ISR, including creation and function config. To use ISR you need to use at least 2.x of Open Next, for 1.x please set create to false | <pre>object({<br>    create = bool<br>    revalidation_function = optional(object({<br>      runtime                          = optional(string, "nodejs18.x")<br>      deployment                       = optional(string, "REGIONAL_LAMBDA")<br>      timeout                          = optional(number, 30)<br>      memory_size                      = optional(number, 128)<br>      additional_environment_variables = optional(map(string), {})<br>      additional_iam_policies = optional(list(object({<br>        name   = string,<br>        arn    = optional(string)<br>        policy = optional(string)<br>      })), [])<br>      vpc = optional(object({<br>        security_group_ids = list(string),<br>        subnet_ids         = list(string)<br>      }))<br>      timeouts = optional(object({<br>        create = optional(string)<br>        update = optional(string)<br>        delete = optional(string)<br>      }), {})<br>    }), {})<br>    tag_mapping_db = optional(object({<br>      create         = bool<br>      billing_mode   = optional(string, "PAY_PER_REQUEST")<br>      read_capacity  = optional(number)<br>      write_capacity = optional(number)<br>      }), {<br>      create = true<br>    })<br>  })</pre> | <pre>{<br>  "create": true<br>}</pre> | no |
-| <a name="input_open_next"></a> [open\_next](#input\_open\_next) | The next.js website config for single and multi-zone deployments | <pre>object({<br>    exclusion_regex  = optional(string)<br>    root_folder_path = string<br>    additional_zones = optional(list(object({<br>      name        = string<br>      http_path   = string<br>      folder_path = string<br>    })), [])<br>  })</pre> | n/a | yes |
-| <a name="input_preferred_architecture"></a> [preferred\_architecture](#input\_preferred\_architecture) | Preferred instruction set architecture for the lambda function. If lambda@edge is used for the server function, the architecture will be set to x86\_64 for that function | `string` | `"arm64"` | no |
-| <a name="input_prefix"></a> [prefix](#input\_prefix) | A prefix which will be attached to the resource name to ensure resources are random | `string` | `null` | no |
-| <a name="input_server_function"></a> [server\_function](#input\_server\_function) | Configuration for the server function | <pre>object({<br>    runtime                          = optional(string, "nodejs18.x")<br>    deployment                       = optional(string, "REGIONAL_LAMBDA")<br>    timeout                          = optional(number, 10)<br>    memory_size                      = optional(number, 1024)<br>    additional_environment_variables = optional(map(string), {})<br>    additional_iam_policies = optional(list(object({<br>      name   = string,<br>      arn    = optional(string)<br>      policy = optional(string)<br>    })), [])<br>    vpc = optional(object({<br>      security_group_ids = list(string),<br>      subnet_ids         = list(string)<br>    }))<br>    timeouts = optional(object({<br>      create = optional(string)<br>      update = optional(string)<br>      delete = optional(string)<br>    }), {})<br>  })</pre> | `{}` | no |
-| <a name="input_suffix"></a> [suffix](#input\_suffix) | A suffix which will be attached to the resource name to ensure resources are random | `string` | `null` | no |
-| <a name="input_vpc"></a> [vpc](#input\_vpc) | The default VPC configuration for the lambda resources. This can be overridden for each function | <pre>object({<br>    security_group_ids = list(string),<br>    subnet_ids         = list(string)<br>  })</pre> | `null` | no |
-| <a name="input_waf"></a> [waf](#input\_waf) | Configuration for the CloudFront distribution WAF | <pre>object({<br>    web_acl_id = optional(string)<br>  })</pre> | `{}` | no |
-| <a name="input_warmer_function"></a> [warmer\_function](#input\_warmer\_function) | Configuration for the warmer function | <pre>object({<br>    create                           = bool<br>    runtime                          = optional(string, "nodejs18.x")<br>    concurrency                      = optional(number, 20)<br>    timeout                          = optional(number, 15 * 60) // 15 minutes<br>    memory_size                      = optional(number, 1024)<br>    schedule                         = optional(string, "rate(5 minutes)")<br>    additional_environment_variables = optional(map(string), {})<br>    additional_iam_policies = optional(list(object({<br>      name   = string,<br>      arn    = optional(string)<br>      policy = optional(string)<br>    })), [])<br>    vpc = optional(object({<br>      security_group_ids = list(string),<br>      subnet_ids         = list(string)<br>    }))<br>    timeouts = optional(object({<br>      create = optional(string)<br>      update = optional(string)<br>      delete = optional(string)<br>    }), {})<br>  })</pre> | <pre>{<br>  "create": false<br>}</pre> | no |
-
-### Outputs
-
-| Name | Description |
-|------|-------------|
-| <a name="output_cloudfront_url"></a> [cloudfront\_url](#output\_cloudfront\_url) | The URL for the cloudfront distribution |
-| <a name="output_domain_names"></a> [domain\_names](#output\_domain\_names) | The custom domain names attached to the cloudfront distribution |

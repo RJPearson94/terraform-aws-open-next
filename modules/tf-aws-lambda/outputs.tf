@@ -1,21 +1,16 @@
-output "function_name" {
+output "name" {
   description = "The lambda function name"
   value       = aws_lambda_function.lambda_function.function_name
 }
 
-output "function_arn" {
+output "arn" {
   description = "The lambda ARN"
   value       = aws_lambda_function.lambda_function.arn
 }
 
-output "function_version" {
+output "version" {
   description = "The function version that is deployed"
   value       = aws_lambda_function.lambda_function.version
-}
-
-output "invoke_arn" {
-  description = "The API Gateway invoke ARN"
-  value       = aws_lambda_function.lambda_function.invoke_arn
 }
 
 output "qualified_arn" {
@@ -23,7 +18,7 @@ output "qualified_arn" {
   value       = aws_lambda_function.lambda_function.qualified_arn
 }
 
-output "function_url_hostname" {
-  description = "The hostname for the lambda function url"
-  value       = length(aws_lambda_function_url.function_url) > 0 ? trimsuffix(trimprefix(one(aws_lambda_function_url.function_url).function_url, "https://"), "/") : null
+output "url_hostnames" {
+  description = "The hostname for the lambda function urls"
+  value       = length(aws_lambda_function_url.function_url) > 0 ? { for url in aws_lambda_function_url.function_url : url.qualifier => trimsuffix(trimprefix(aws_lambda_function_url.function_url[url.qualifier].function_url, "https://"), "/") } : {}
 }

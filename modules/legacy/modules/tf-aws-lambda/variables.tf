@@ -1,30 +1,16 @@
-variable "prefix" {
-  description = "A prefix which will be attached to resource name to esnure resources are random"
-  type        = string
-}
-
-variable "suffix" {
-  description = "A suffix which will be attached to resource name to esnure resources are random"
-  type        = string
-}
-
 variable "function_name" {
   description = "The name of the lambda function"
   type        = string
 }
 
-variable "deployment_package" {
-  type = object({
-    zip = optional(object({
-      path = string
-      hash = string
-    }))
-    s3 = optional(object({
-      bucket         = string
-      key            = string
-      object_version = optional(string)
-    }))
-  })
+variable "zip_file" {
+  description = "The absolute path to the lambda function zip"
+  type        = string
+}
+
+variable "hash" {
+  description = "A hash to determine whether a new version of the lambda function should be deployed"
+  type        = string
 }
 
 variable "runtime" {
@@ -67,7 +53,7 @@ variable "cloudwatch_log" {
 }
 
 variable "environment_variables" {
-  description = "Specify environment variables for the lambda function"
+  description = "Specify additional environment variables for the lambda function"
   type        = map(string)
   default     = {}
 }
@@ -130,29 +116,14 @@ variable "run_at_edge" {
   default     = false
 }
 
-variable "aliases" {
-  description = "List of aliases to create"
-  type = object({
-    create          = optional(bool, true)
-    names           = optional(list(string), ["stable"])
-    alias_to_update = optional(string, "stable")
-  })
-  default = {}
+variable "prefix" {
+  description = "A prefix which will be attached to resource name to esnure resources are random"
+  type        = string
 }
 
-variable "xray_tracing" {
-  description = "Configuration for AWS tracing on the function"
-  type = object({
-    enable = optional(bool, false),
-    mode   = optional(string, "Active")
-  })
-  default = {}
-}
-
-variable "layers" {
-  description = "A list of layer arns to associate with the lambda"
-  type        = list(string)
-  default     = null
+variable "suffix" {
+  description = "A suffix which will be attached to resource name to esnure resources are random"
+  type        = string
 }
 
 variable "timeouts" {
@@ -163,10 +134,4 @@ variable "timeouts" {
     delete = optional(string)
   })
   default = {}
-}
-
-variable "schedule" {
-  description = "The schedule to invoke the function"
-  type        = string
-  default     = null
 }
