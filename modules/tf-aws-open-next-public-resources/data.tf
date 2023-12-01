@@ -23,7 +23,7 @@ data "aws_cloudfront_cache_policy" "caching_optimized" {
 # Zip Archives
 
 data "archive_file" "auth_function" {
-  count       = local.should_create_auth_lambda && try(var.auth_function.deployment_artifact.zip, null) == null && try(var.auth_function.deployment_artifact.s3, null) == null ? 1 : 0
+  count       = local.should_create_auth_lambda && try(var.auth_function.function_code.zip, null) == null && try(var.auth_function.function_code.s3, null) == null ? 1 : 0
   type        = "zip"
   output_path = "${path.module}/code/auth.zip"
   source_dir  = "${path.module}/code/auth"

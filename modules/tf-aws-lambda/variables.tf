@@ -13,7 +13,7 @@ variable "function_name" {
   type        = string
 }
 
-variable "deployment_package" {
+variable "function_code" {
   type = object({
     zip = optional(object({
       path = string

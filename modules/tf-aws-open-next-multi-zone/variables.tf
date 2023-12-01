@@ -97,7 +97,7 @@ variable "warmer_function" {
       enabled     = optional(bool, false)
       concurrency = optional(number)
     }))
-    deployment_artifact = optional(object({
+    function_code = optional(object({
       handler = optional(string)
       zip = optional(object({
         path = string
@@ -144,7 +144,7 @@ variable "warmer_function" {
 variable "server_function" {
   description = "Configuration for the server function. This can be overridden for each zone"
   type = object({
-    deployment_artifact = optional(object({
+    function_code = optional(object({
       handler = optional(string)
       zip = optional(object({
         path = string
@@ -191,7 +191,7 @@ variable "image_optimisation_function" {
   description = "Configuration for the image optimisation function. This can be overridden for each zone"
   type = object({
     create = optional(bool, true)
-    deployment_artifact = optional(object({
+    function_code = optional(object({
       handler = optional(string)
       zip = optional(object({
         path = string
@@ -237,7 +237,7 @@ variable "image_optimisation_function" {
 variable "revalidation_function" {
   description = "Configuration for the revalidation function. This can be overridden for each zone"
   type = object({
-    deployment_artifact = optional(object({
+    function_code = optional(object({
       handler = optional(string)
       zip = optional(object({
         path = string
@@ -324,7 +324,7 @@ variable "distribution" {
     auth_function = optional(object({
       deployment = optional(string, "NONE")
       arn        = optional(string)
-      deployment_artifact = optional(object({
+      function_code = optional(object({
         handler = optional(string)
         zip = optional(object({
           path = string
@@ -579,7 +579,7 @@ variable "behaviours" {
 }
 
 variable "waf" {
-  description = "Configuration for the CloudFront distribution WAF. When the deployment is set to 'INDEPENDENT_ZONES' this can be overridden for each zone. If deployment is 'SHARED_DISTRIBUTION' or 'SHARED_DISTRIBUTION_AND_BUCKET' this configuration is used"
+  description = "Configuration for the CloudFront distribution WAF. For enforce basic auth, to protect the secret value, the encoded string has been marked as sensitive. I would make this configurable to allow it to be marked as sensitive or not however Terraform panics when you use the sensitive function as part of a ternary. If you need to see all rules, see this discussion https://discuss.hashicorp.com/t/how-to-show-sensitive-values/24076/4. When the deployment is set to 'INDEPENDENT_ZONES' this can be overridden for each zone. If deployment is 'SHARED_DISTRIBUTION' or 'SHARED_DISTRIBUTION_AND_BUCKET' this configuration is used"
   type = object({
     deployment = optional(string, "NONE")
     web_acl_id = optional(string)
@@ -675,12 +675,23 @@ variable "waf" {
         }))
         custom_response_body_key = optional(string)
       }))
-      ip_address_restrictions = optional(list(object({
+      ip_address_restrictions = list(object({
         action = optional(string, "BYPASS")
         arn    = optional(string)
         name   = optional(string)
-      })))
+      }))
     })))
+    default_action = optional(object({
+      action = optional(string, "COUNT")
+      block_action = optional(object({
+        response_code = number
+        response_header = optional(object({
+          name  = string
+          value = string
+        }))
+        custom_response_body_key = optional(string)
+      }))
+    }))
     ip_addresses = optional(map(object({
       description        = optional(string)
       ip_address_version = string
@@ -792,7 +803,7 @@ variable "zones" {
         enabled     = optional(bool, false)
         concurrency = optional(number)
       }))
-      deployment_artifact = optional(object({
+      function_code = optional(object({
         handler = optional(string)
         zip = optional(object({
           path = string
@@ -834,7 +845,7 @@ variable "zones" {
       }), {})
     }))
     server_function = optional(object({
-      deployment_artifact = optional(object({
+      function_code = optional(object({
         handler = optional(string)
         zip = optional(object({
           path = string
@@ -876,7 +887,7 @@ variable "zones" {
     }))
     image_optimisation_function = optional(object({
       create = optional(bool, true)
-      deployment_artifact = optional(object({
+      function_code = optional(object({
         handler = optional(string)
         zip = optional(object({
           path = string
@@ -917,7 +928,7 @@ variable "zones" {
       }), {})
     }))
     revalidation_function = optional(object({
-      deployment_artifact = optional(object({
+      function_code = optional(object({
         handler = optional(string)
         zip = optional(object({
           path = string
@@ -989,7 +1000,7 @@ variable "zones" {
       auth_function = optional(object({
         deployment = optional(string, "NONE")
         arn        = optional(string)
-        deployment_artifact = optional(object({
+        function_code = optional(object({
           handler = optional(string)
           zip = optional(object({
             path = string
@@ -1324,12 +1335,23 @@ variable "zones" {
           }))
           custom_response_body_key = optional(string)
         }))
-        ip_address_restrictions = optional(list(object({
+        ip_address_restrictions = list(object({
           action = optional(string, "BYPASS")
           arn    = optional(string)
           name   = optional(string)
-        })))
+        }))
       })))
+      default_action = optional(object({
+        action = optional(string, "COUNT")
+        block_action = optional(object({
+          response_code = number
+          response_header = optional(object({
+            name  = string
+            value = string
+          }))
+          custom_response_body_key = optional(string)
+        }))
+      }))
       ip_addresses = optional(map(object({
         description        = optional(string)
         ip_address_version = string

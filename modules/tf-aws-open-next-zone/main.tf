@@ -20,8 +20,6 @@ locals {
   prefix = var.prefix == null ? "" : "${var.prefix}-"
   suffix = var.suffix == null ? "" : "-${var.suffix}"
 
-  server_at_edge = var.server_function.deployment == "EDGE_LAMBDA"
-
   zone = {
     server_domain_name             = lookup(module.server_function.url_hostnames, local.staging_alias, null)
     server_function_arn            = local.server_at_edge ? module.server_function.qualified_arn : module.server_function.arn
@@ -40,6 +38,7 @@ locals {
     })
   })
 
+  server_at_edge = var.server_function.deployment == "EDGE_LAMBDA"
   server_function_env_variables = merge(
     {
       "CACHE_BUCKET_NAME" : local.website_bucket_name,
@@ -183,7 +182,7 @@ module "s3_assets" {
 
 # As lambda@edge does not support environment variables, the module will injected them at the top of the server code prior to the code being uploaded to AWS, credit to SST for the inspiration behind this. https://github.com/sst/sst/blob/3b792053d90c49d9ca693308646a3389babe9ceb/packages/sst/src/constructs/EdgeFunction.ts#L193
 resource "local_file" "lambda_at_edge_modifications" {
-  count = local.server_at_edge && try(var.server_function.deployment_artifact.zip, null) == null && try(var.server_function.deployment_artifact.s3, null) == null ? 1 : 0
+  count = local.server_at_edge && try(var.server_function.function_code.zip, null) == null && try(var.server_function.function_code.s3, null) == null ? 1 : 0
 
   content  = "process.env = { ...process.env, ...${jsonencode(local.server_function_env_variables)} };\r\n${file("${var.folder_path}/server-function/index.mjs")}"
   filename = "${var.folder_path}/server-function/index.mjs"
@@ -193,16 +192,16 @@ module "server_function" {
   source = "../tf-aws-lambda"
 
   function_name = "server-function"
-  deployment_package = {
-    zip = try(var.server_function.deployment_artifact.s3, null) == null ? coalesce(try(var.server_function.deployment_artifact.zip, null), {
+  function_code = {
+    zip = try(var.server_function.function_code.s3, null) == null ? coalesce(try(var.server_function.function_code.zip, null), {
       path = one(data.archive_file.server_function[*].output_path)
       hash = one(data.archive_file.server_function[*].output_base64sha256)
     }) : null
-    s3 = try(var.server_function.deployment_artifact.s3, null)
+    s3 = try(var.server_function.function_code.s3, null)
   }
 
   runtime = var.server_function.runtime
-  handler = try(var.server_function.deployment_artifact.handler, "index.handler")
+  handler = try(var.server_function.function_code.handler, "index.handler")
 
   memory_size = var.server_function.memory_size
   timeout     = var.server_function.timeout
@@ -284,16 +283,16 @@ module "warmer_function" {
   source   = "../tf-aws-lambda"
 
   function_name = "${each.value}-warmer-function"
-  deployment_package = {
-    zip = try(var.warmer_function.deployment_artifact.s3, null) == null ? coalesce(try(var.warmer_function.deployment_artifact.zip, null), {
+  function_code = {
+    zip = try(var.warmer_function.function_code.s3, null) == null ? coalesce(try(var.warmer_function.function_code.zip, null), {
       path = one(data.archive_file.warmer_function[*].output_path)
       hash = one(data.archive_file.warmer_function[*].output_base64sha256)
     }) : null
-    s3 = try(var.warmer_function.deployment_artifact.s3, null)
+    s3 = try(var.warmer_function.function_code.s3, null)
   }
 
   runtime = var.warmer_function.runtime
-  handler = try(var.warmer_function.deployment_artifact.handler, "index.handler")
+  handler = try(var.warmer_function.function_code.handler, "index.handler")
 
   memory_size = var.warmer_function.memory_size
   timeout     = var.warmer_function.timeout
@@ -341,16 +340,16 @@ module "image_optimisation_function" {
   source = "../tf-aws-lambda"
 
   function_name = "image-optimization-function"
-  deployment_package = {
-    zip = try(var.image_optimisation_function.deployment_artifact.s3, null) == null ? coalesce(try(var.image_optimisation_function.deployment_artifact.zip, null), {
+  function_code = {
+    zip = try(var.image_optimisation_function.function_code.s3, null) == null ? coalesce(try(var.image_optimisation_function.function_code.zip, null), {
       path = one(data.archive_file.image_optimisation_function[*].output_path)
       hash = one(data.archive_file.image_optimisation_function[*].output_base64sha256)
     }) : null
-    s3 = try(var.image_optimisation_function.deployment_artifact.s3, null)
+    s3 = try(var.image_optimisation_function.function_code.s3, null)
   }
 
   runtime = var.image_optimisation_function.runtime
-  handler = try(var.image_optimisation_function.deployment_artifact.handler, "index.handler")
+  handler = try(var.image_optimisation_function.function_code.handler, "index.handler")
 
   memory_size = var.image_optimisation_function.memory_size
   timeout     = var.image_optimisation_function.timeout
@@ -404,16 +403,16 @@ module "revalidation_function" {
   source = "../tf-aws-lambda"
 
   function_name = "revalidation-function"
-  deployment_package = {
-    zip = try(var.revalidation_function.deployment_artifact.s3, null) == null ? coalesce(try(var.revalidation_function.deployment_artifact.zip, null), {
+  function_code = {
+    zip = try(var.revalidation_function.function_code.s3, null) == null ? coalesce(try(var.revalidation_function.function_code.zip, null), {
       path = one(data.archive_file.revalidation_function[*].output_path)
       hash = one(data.archive_file.revalidation_function[*].output_base64sha256)
     }) : null
-    s3 = try(var.revalidation_function.deployment_artifact.s3, null)
+    s3 = try(var.revalidation_function.function_code.s3, null)
   }
 
   runtime = var.revalidation_function.runtime
-  handler = try(var.revalidation_function.deployment_artifact.handler, "index.handler")
+  handler = try(var.revalidation_function.function_code.handler, "index.handler")
 
   memory_size = var.revalidation_function.memory_size
   timeout     = var.revalidation_function.timeout

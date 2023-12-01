@@ -2,7 +2,7 @@ locals {
   prefix = var.prefix == null ? "" : "${var.prefix}-"
   suffix = var.suffix == null ? "" : "-${var.suffix}"
 
-  should_use_zip      = var.deployment_package.zip != null
+  should_use_zip      = var.function_code.zip != null
   trigger_on_schedule = var.schedule != null
 
   alias_names = var.aliases.create ? var.aliases.names : []
@@ -11,11 +11,11 @@ locals {
 # Lambda
 
 resource "aws_lambda_function" "lambda_function" {
-  filename          = local.should_use_zip ? try(var.deployment_package.zip.path) : null
-  source_code_hash  = local.should_use_zip ? try(var.deployment_package.zip.hash) : null
-  s3_bucket         = local.should_use_zip ? null : try(var.deployment_package.s3.bucket)
-  s3_key            = local.should_use_zip ? null : try(var.deployment_package.s3.key)
-  s3_object_version = local.should_use_zip ? null : try(var.deployment_package.s3.object_version)
+  filename          = local.should_use_zip ? try(var.function_code.zip.path) : null
+  source_code_hash  = local.should_use_zip ? try(var.function_code.zip.hash) : null
+  s3_bucket         = local.should_use_zip ? null : try(var.function_code.s3.bucket)
+  s3_key            = local.should_use_zip ? null : try(var.function_code.s3.key)
+  s3_object_version = local.should_use_zip ? null : try(var.function_code.s3.object_version)
 
   function_name = "${local.prefix}${var.function_name}${local.suffix}"
   role          = aws_iam_role.lambda_iam.arn

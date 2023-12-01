@@ -258,10 +258,11 @@ locals {
       priority = var.waf.enforce_basic_auth.priority
       action   = "BLOCK"
       block_action = {
-        response_code   = var.waf.enforce_basic_auth.response_code
-        response_header = var.waf.enforce_basic_auth.response_header
+        response_code            = var.waf.enforce_basic_auth.response_code
+        response_header          = var.waf.enforce_basic_auth.response_header
+        custom_response_body_key = null
       }
-      logical_rule                 = var.waf.enforce_basic_auth.ip_address_restriction != null ? "AND" : null
+      logical_rule                 = var.waf.enforce_basic_auth.ip_address_restrictions != null ? "AND" : null
       managed_rule_group_statement = null
       rate_based_statement         = null
       ip_set_reference_statements = var.waf.enforce_basic_auth.ip_address_restrictions != null ? [for ip_address_restriction in var.waf.enforce_basic_auth.ip_address_restrictions : {
@@ -271,7 +272,9 @@ locals {
       byte_match_statement = {
         not                   = true
         positional_constraint = "EXACTLY"
-        search_string         = "Basic ${base64encode("${var.waf.enforce_basic_auth.credentials.username}:${var.waf.enforce_basic_auth.credentials.password}")}"
+        // I would make this configurable to allow it to be marked as sensitive or not however Terraform panics when you use the sensitive function as part of a ternary
+        // This has been marked as sensitive by default if you need to see all rules, see this discussion https://discuss.hashicorp.com/t/how-to-show-sensitive-values/24076/4
+        search_string = "Basic ${sensitive(base64encode("${var.waf.enforce_basic_auth.credentials.username}:${var.waf.enforce_basic_auth.credentials.password}"))}"
         field_to_match = {
           single_header = {
             name = var.waf.enforce_basic_auth.header_name
@@ -318,15 +321,15 @@ module "auth_function" {
   suffix        = var.suffix
   function_name = "auth-function"
 
-  deployment_package = {
-    zip = try(var.auth_function.deployment_artifact.s3, null) == null ? coalesce(try(var.auth_function.deployment_artifact.zip, null), {
+  function_code = {
+    zip = try(var.auth_function.function_code.s3, null) == null ? coalesce(try(var.auth_function.function_code.zip, null), {
       path = one(data.archive_file.auth_function[*].output_path)
       hash = one(data.archive_file.auth_function[*].output_base64sha256)
     }) : null
-    s3 = try(var.auth_function.deployment_artifact.s3, null)
+    s3 = try(var.auth_function.function_code.s3, null)
   }
 
-  handler     = try(var.auth_function.deployment_artifact.handler, "index.handler")
+  handler     = try(var.auth_function.function_code.handler, "index.handler")
   run_at_edge = true
 
   runtime     = var.auth_function.runtime
@@ -941,7 +944,7 @@ resource "terraform_data" "remove_continuous_deployment_id" {
     command = "/bin/bash ${path.module}/scripts/remove-continuous-deployment-policy-id.sh"
 
     environment = {
-      "CDN_PRODUCTION_ID"   = one(aws_cloudfront_distribution.production_distribution[*].id)
+      "CDN_PRODUCTION_ID" = one(aws_cloudfront_distribution.production_distribution[*].id)
     }
   }
 }
@@ -953,8 +956,35 @@ resource "aws_wafv2_web_acl" "distribution_waf" {
   name  = "${local.prefix}website-waf${local.suffix}"
   scope = "CLOUDFRONT"
 
-  default_action {
-    allow {}
+  dynamic "default_action" {
+    for_each = var.waf.default_action != null ? [var.waf.default_action] : [{ action = "ALLOW", block_action = null }]
+    content {
+      dynamic "allow" {
+        for_each = default_action.value.action == "ALLOW" ? [true] : []
+        content {}
+      }
+
+      dynamic "block" {
+        for_each = default_action.value.action == "BLOCK" ? [true] : []
+        content {
+          dynamic "custom_response" {
+            for_each = default_action.value.block_action != null ? [default_action.value.block_action] : []
+            content {
+              response_code            = custom_response.value.response_code
+              custom_response_body_key = custom_response.value.custom_response_body_key
+
+              dynamic "response_header" {
+                for_each = custom_response.value.response_header != null ? [custom_response.value.response_header] : []
+                content {
+                  name  = response_header.value.name
+                  value = response_header.value.value
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   dynamic "custom_response_body" {
