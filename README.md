@@ -9,6 +9,7 @@ As part of v2 of the module, the monolithic [legacy](./modules/legacy) module wa
 If you want to take advantage of some of the new features, such as:
 
 - Improved OpenNext 2.x support
+  - Support for server actions (this is not supported with lambda@edge)
 - More deployment and configuration options
 - CloudFront continuous deployments
   - AWS Developer Guide - https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/continuous-deployment.html
