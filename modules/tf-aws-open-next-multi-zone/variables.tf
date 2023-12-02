@@ -603,7 +603,7 @@ variable "waf" {
         priority         = optional(number)
         rule_name_suffix = optional(string)
         limit            = optional(number, 1000)
-        behaviour        = optional(string, "BLOCK")
+        action           = optional(string, "BLOCK")
         geo_match_scope  = optional(list(string))
       })), [])
     }), {})
@@ -653,8 +653,9 @@ variable "waf" {
       }), {})
       header_name = optional(string, "authorization")
       credentials = optional(object({
-        username = string
-        password = string
+        username          = string
+        password          = string
+        mark_as_sensitive = optional(bool, true)
       }))
       ip_address_restrictions = optional(list(object({
         action = optional(string, "BYPASS")
@@ -1263,7 +1264,7 @@ variable "zones" {
           priority         = optional(number)
           rule_name_suffix = optional(string)
           limit            = optional(number, 1000)
-          behaviour        = optional(string, "BLOCK")
+          action           = optional(string, "BLOCK")
           geo_match_scope  = optional(list(string))
         })), [])
       }), {})
@@ -1313,8 +1314,9 @@ variable "zones" {
         }), {})
         header_name = optional(string, "authorization")
         credentials = optional(object({
-          username = string
-          password = string
+          username          = string
+          password          = string
+          mark_as_sensitive = optional(bool, true)
         }))
         ip_address_restrictions = optional(list(object({
           action = optional(string, "BYPASS")

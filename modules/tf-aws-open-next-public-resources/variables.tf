@@ -98,7 +98,7 @@ variable "auth_function" {
   }
 
   validation {
-    condition     = contains(["NONE", "CREATE", "DETACH"], var.auth_function.deployment) || (var.auth_function.deployment == "USE_EXISTING" && var.auth_function.qualified_arn != null)
+    condition     = anytrue([contains(["NONE", "CREATE", "DETACH"], var.auth_function.deployment), (var.auth_function.deployment == "USE_EXISTING" && var.auth_function.qualified_arn != null)])
     error_message = "The auth function qualified ARN must be set when the deployment is set to USE_EXISTING"
   }
 }
@@ -124,7 +124,7 @@ variable "cache_policy" {
   }
 
   validation {
-    condition     = var.cache_policy.deployment == "CREATE" || (var.cache_policy.deployment == "USE_EXISTING" && var.cache_policy.arn != null)
+    condition     = anytrue([var.cache_policy.deployment == "CREATE", (var.cache_policy.deployment == "USE_EXISTING" && var.cache_policy.arn != null)])
     error_message = "The cache policy ARN must be set when the deployment is set to USE_EXISTING"
   }
 }
@@ -145,6 +145,16 @@ variable "zones" {
     server_origin_headers          = optional(map(string))
     use_auth_lambda                = optional(bool)
   }))
+
+  validation {
+    condition     = length(var.zones) > 0
+    error_message = "At least 1 zone needs to be supplied"
+  }
+
+  validation {
+    condition     = length([for zone in var.zones: zone if zone.root == true]) == 1
+    error_message = "There must be exactly 1 root zone"
+  }
 }
 
 variable "behaviours" {
@@ -393,7 +403,7 @@ variable "waf" {
         priority         = optional(number)
         rule_name_suffix = optional(string)
         limit            = optional(number, 1000)
-        behaviour        = optional(string, "BLOCK")
+        action           = optional(string, "BLOCK")
         geo_match_scope  = optional(list(string))
       })), [])
     }), {})
@@ -443,8 +453,9 @@ variable "waf" {
       }), {})
       header_name = optional(string, "authorization")
       credentials = optional(object({
-        username = string
-        password = string
+        username          = string
+        password          = string
+        mark_as_sensitive = optional(bool, true)
       }))
       ip_address_restrictions = optional(list(object({
         action = optional(string, "BYPASS")
@@ -496,18 +507,48 @@ variable "waf" {
   default = {}
 
   validation {
-    condition     = contains(["NONE", "USE_EXISTING", "CREATE"], var.waf.deployment)
-    error_message = "The WAF deployment can be one of NONE, USE_EXISTING or CREATE"
+    condition     = contains(["NONE", "USE_EXISTING", "CREATE", "DETACH"], var.waf.deployment)
+    error_message = "The WAF deployment can be one of NONE, USE_EXISTING, CREATE or DETACH"
   }
 
   validation {
-    condition     = contains(["NONE", "CREATE"], var.waf.deployment) || (var.waf.deployment == "USE_EXISTING" && var.waf.web_acl_id != null)
+    condition     = anytrue([contains(["NONE", "CREATE", "DETACH"], var.waf.deployment), (var.waf.deployment == "USE_EXISTING" && var.waf.web_acl_id != null)])
     error_message = "The Web ACL ID must be set when the deployment is set to USE_EXISTING"
   }
 
   validation {
-    condition     = var.waf.default_action == null || contains(["ALLOW", "BLOCK"], var.waf.default_action.action)
+    condition     = var.waf.default_action == null ? true : contains(["ALLOW", "BLOCK"], var.waf.default_action.action)
     error_message = "The WAF default action can be one of ALLOW or BLOCK"
+  }
+
+  validation {
+    condition = var.waf.additional_rules == null ? true : alltrue([
+      for additional_rule in var.waf.additional_rules : contains(["COUNT", "BLOCK"], additional_rule.action)
+    ])
+    error_message = "All additional rule actions must be either COUNT or BLOCK"
+  }
+
+  validation {
+    condition = var.waf.additional_rules == null ? true : alltrue(flatten([
+      for additional_rule in var.waf.additional_rules : [
+        for ip_address_restriction in additional_rule.ip_address_restrictions : contains(["BYPASS", "BLOCK"], ip_address_restriction.action)
+      ]
+    ]))
+    error_message = "All IP address restriction actions must be either BYPASS or BLOCK for each additional rule"
+  }
+
+  validation {
+    condition = try(var.waf.enforce_basic_auth.ip_address_restrictions, null) == null ? true : alltrue([
+      for ip_address_restriction in var.waf.enforce_basic_auth.ip_address_restrictions : contains(["BYPASS", "BLOCK"], ip_address_restriction.action)
+    ])
+    error_message = "All IP address restriction actions must be either BYPASS or BLOCK for basic auth"
+  }
+
+  validation {
+    condition = try(var.waf.rate_limiting.limits, null) == null ? true : alltrue([
+      for limit in var.waf.rate_limiting.limits : contains(["COUNT", "BLOCK"], limit.action)
+    ])
+    error_message = "All rate limit actions must be either COUNT or BLOCK"
   }
 }
 
@@ -552,22 +593,22 @@ variable "continuous_deployment" {
   })
 
   validation {
-    condition     = var.continuous_deployment.use == false || (var.continuous_deployment.use == true && var.continuous_deployment.deployment != null)
+    condition     = anytrue([var.continuous_deployment.use == false, (var.continuous_deployment.use == true && var.continuous_deployment.deployment != null)])
     error_message = "Deployment must be set when continuous deployment is used"
   }
 
   validation {
-    condition     = var.continuous_deployment.deployment == null || contains(["NONE", "ACTIVE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment)
+    condition     = anytrue([var.continuous_deployment.use == false, var.continuous_deployment.deployment == null, contains(["NONE", "ACTIVE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment)])
     error_message = "The deployment strategy can be one of NONE, ACTIVE, DETACH or PROMOTE"
   }
 
   validation {
-    condition     = contains(["NONE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment) || (var.continuous_deployment.deployment == "ACTIVE" && var.continuous_deployment.traffic_config != null)
+    condition     = anytrue([var.continuous_deployment.use == false, contains(["NONE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment), (var.continuous_deployment.deployment == "ACTIVE" && var.continuous_deployment.traffic_config != null)])
     error_message = "The traffic config must be set when the deployment is set to active"
   }
 
   validation {
-    condition     = var.continuous_deployment.traffic_config == null || (var.continuous_deployment.traffic_config.header != null || var.continuous_deployment.traffic_config.weight != null)
+    condition     = anytrue([var.continuous_deployment.use == false, contains(["NONE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment), var.continuous_deployment.traffic_config == null ? true : (var.continuous_deployment.traffic_config.header != null || var.continuous_deployment.traffic_config.weight != null)])
     error_message = "Either the header or weight traffic config needs to be set"
   }
 }

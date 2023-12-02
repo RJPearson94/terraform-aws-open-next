@@ -180,7 +180,7 @@ locals {
         name                         = join("-", compact(["aws-rate-based-rule", rule.rule_name_suffix, rule.limit]))
         priority                     = rule.priority
         managed_rule_group_statement = null
-        action                       = rule.behaviour
+        action                       = rule.action
         block_action                 = null
         logical_rule                 = null
         rate_based_statement = {
@@ -275,9 +275,8 @@ locals {
       byte_match_statement = {
         not                   = true
         positional_constraint = "EXACTLY"
-        // I would make this configurable to allow it to be marked as sensitive or not however Terraform panics when you use the sensitive function as part of a ternary
-        // This has been marked as sensitive by default if you need to see all rules, see this discussion https://discuss.hashicorp.com/t/how-to-show-sensitive-values/24076/4
-        search_string = "Basic ${sensitive(base64encode("${var.waf.enforce_basic_auth.credentials.username}:${var.waf.enforce_basic_auth.credentials.password}"))}"
+        // There was a bug in Terraform v1.6.0 which causes this not to work, please upgrade to at least v1.6.1
+        search_string = "Basic ${var.waf.enforce_basic_auth.credentials.mark_as_sensitive == false ?  base64encode("${var.waf.enforce_basic_auth.credentials.username}:${var.waf.enforce_basic_auth.credentials.password}") : sensitive(base64encode("${var.waf.enforce_basic_auth.credentials.username}:${var.waf.enforce_basic_auth.credentials.password}"))}"
         field_to_match = {
           single_header = {
             name = var.waf.enforce_basic_auth.header_name

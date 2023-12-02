@@ -389,7 +389,6 @@ module "image_optimisation_function" {
     alias_to_update = local.staging_alias
   }
 
-
   timeouts = var.image_optimisation_function.timeouts
 
   providers = {
