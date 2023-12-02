@@ -27,6 +27,7 @@ If you want to take advantage of some of the new features, such as:
         - Credit to Shinji Nakamatu for this idea - https://dev.to/snaka/implementing-secure-access-control-using-aws-waf-with-ip-address-and-basic-authentication-45hn
     - Custom rules (with custom response bodies) i.e. add a maintainance page to take the website offline when maintainance is taking place
         - Credit to Paul L for this idea - https://repost.aws/questions/QUeXIw1g0hSxiF0BpugsT7aw/how-to-implement-the-maintenance-page-using-route-53-to-switch-between-cloudfront-distributions
+    - Configure default action (with custom response bodies)
 - Custom Error Pages
 
 And more. Then please use 2.x of the module.
@@ -54,9 +55,40 @@ Below are diagrams of the possible architecture combinations that can configured
 
 ![Single Zone Complete](./docs/diagrams/Single%20Zone.png)
 
+
+```tf
+module "single_zone" {
+  source  = "RJPearson94/open-next/aws//modules/tf-aws-open-next-zone"
+  version = ">= 2.0.0, < 3.0.0"
+
+  prefix = "open-next-${get_aws_account_id()}"
+  folder_path = "./.open-next"
+}
+```
+
 ### Multi-Zone - Independent Zones
 
 ![Multi Zone - Independent Zones](./docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
+
+```tf
+module "independent_zones" {
+  source  = "RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone"
+  version = ">= 2.0.0, < 3.0.0"
+
+  prefix = "open-next-ind-${get_aws_account_id()}"
+  deployment = "INDEPENDENT_ZONES"
+
+  zones = [{
+    root = true
+    name = "home"
+    folder_path = "./home/.open-next"
+  },{
+    root = false
+    name = "docs"
+    folder_path = "./docs/.open-next"
+  }]
+}
+```
 
 _Note:_ If you use tools like Terragrunt or CDKTF, you can use the Single Zone module to deploy each zone into its own terraform state
 
@@ -64,9 +96,49 @@ _Note:_ If you use tools like Terragrunt or CDKTF, you can use the Single Zone m
 
 ![Multi Zone - Shared Distribution](./docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
 
+```tf
+module "shared_distribution" {
+  source  = "RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone"
+  version = ">= 2.0.0, < 3.0.0"
+
+  prefix = "open-next-sd-${get_aws_account_id()}"
+  deployment = "SHARED_DISTRIBUTION"
+
+  zones = [{
+    root = true
+    name = "home"
+    folder_path = "./home/.open-next"
+  },{
+    root = false
+    name = "docs"
+    folder_path = "./docs/.open-next"
+  }]
+}
+```
+
 ### Multi-Zone - Shared Distribution and Bucket
 
 ![Multi Zone - Shared Distribution](./docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
+
+```tf
+module "shared_distribution_and_bucket" {
+  source  = "RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone"
+  version = ">= 2.0.0, < 3.0.0"
+
+  prefix = "open-next-sb-${get_aws_account_id()}"
+  deployment = "SHARED_DISTRIBUTION_AND_BUCKET"
+
+  zones = [{
+    root = true
+    name = "home"
+    folder_path = "./home/.open-next"
+  },{
+    root = false
+    name = "docs"
+    folder_path = "./docs/.open-next"
+  }]
+}
+```
 
 ## Examples
 

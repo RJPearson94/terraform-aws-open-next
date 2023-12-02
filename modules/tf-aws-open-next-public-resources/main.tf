@@ -9,6 +9,9 @@ locals {
   create_cache_policy = var.cache_policy.deployment == "CREATE"
   cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : var.cache_policy.arn
 
+  should_create_auth_lambda = contains(["DETACH", "CREATE"], var.auth_function.deployment) || (var.auth_function.deployment != "USE_EXISTING" && length({ for zone in local.zones : "distribution" => zone if try(zone.use_auth_lambda, false) == true }) > 0)
+  auth_lambda_qualified_arn = var.auth_function.deployment == "USE_EXISTING" ? var.auth_function.qualified_arn : local.should_create_auth_lambda ? one(module.auth_function[*].qualified_arn) : null
+
   custom_error_responses = [for custom_error_response in var.custom_error_responses : merge(custom_error_response, { path_pattern = "/${custom_error_response.response_page.behaviour}/*" }) if custom_error_response.response_page != null]
 
   # Force the root zone to the bottom of the behaviours
@@ -88,7 +91,7 @@ locals {
           lambda_function_associations = [
             merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].viewer_request, null), try(var.behaviours.image_optimisation.viewer_request, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-request" }),
             merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].viewer_response, null), try(var.behaviours.image_optimisation.viewer_response, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-response" }),
-            merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].origin_request, null), try(var.behaviours.image_optimisation.origin_request, null), { arn = zone.use_auth_lambda ? one(module.auth_function[*].qualified_arn) : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
+            merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].origin_request, null), try(var.behaviours.image_optimisation.origin_request, null), { arn = zone.use_auth_lambda ? local.auth_lambda_qualified_arn : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
             merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].origin_response, null), try(var.behaviours.image_optimisation.origin_response, null), { arn = null }), { type = "LAMBDA@EDGE", event_type = "origin-response" }),
           ]
         }],
@@ -112,7 +115,7 @@ locals {
           lambda_function_associations = [
             merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].viewer_request, null), try(var.behaviours.server.viewer_request, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-request" }),
             merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].viewer_response, null), try(var.behaviours.server.viewer_response, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-response" }),
-            merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].origin_request, null), try(var.behaviours.server.origin_request, null), { arn = zone.server_at_edge ? zone.server_function_arn : zone.use_auth_lambda ? one(module.auth_function[*].qualified_arn) : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
+            merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].origin_request, null), try(var.behaviours.server.origin_request, null), { arn = zone.server_at_edge ? zone.server_function_arn : zone.use_auth_lambda ? local.auth_lambda_qualified_arn : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
             merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].origin_response, null), try(var.behaviours.server.origin_response, null), { arn = null }), { type = "LAMBDA@EDGE", event_type = "origin-response" }),
           ]
         }]
@@ -301,8 +304,6 @@ locals {
       byte_match_statement         = null
     } if additional_rule.enabled] : []
   )
-
-  should_create_auth_lambda = contains(["DETACH", "CREATE"], var.auth_function.deployment) || length({ for zone in local.zones : "distribution" => zone if try(zone.use_auth_lambda, false) == true }) > 0
 
   aliases = var.domain_config != null ? formatlist(join(".", compact([var.domain_config.sub_domain, "%s"])), distinct([for hosted_zone in var.domain_config.hosted_zones : hosted_zone.name])) : []
   route53_entries = try(var.domain_config.create_route53_entries, false) == true ? { for hosted_zone in var.domain_config.hosted_zones : join("-", compact([hosted_zone.name, hosted_zone.id, hosted_zone.private_zone])) => {

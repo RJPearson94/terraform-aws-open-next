@@ -25,7 +25,7 @@ locals {
     server_function_arn            = local.server_at_edge ? module.server_function.qualified_arn : module.server_function.arn
     server_at_edge                 = local.server_at_edge
     image_optimisation_domain_name = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].url_hostnames)[local.staging_alias] : null
-    use_auth_lambda                = var.server_function.deployment == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA"
+    use_auth_lambda                = var.server_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA"
     bucket_domain_name             = local.website_bucket_domain_name
     bucket_origin_path             = "/${module.s3_assets.origin_asset_path}"
     reinvalidation_hash            = sha1(join("-", concat(module.s3_assets.file_hashes, [module.server_function.version])))
@@ -38,7 +38,7 @@ locals {
     })
   })
 
-  server_at_edge = var.server_function.deployment == "EDGE_LAMBDA"
+  server_at_edge = var.server_function.backend_deployment_type == "EDGE_LAMBDA"
   server_function_env_variables = merge(
     {
       "CACHE_BUCKET_NAME" : local.website_bucket_name,
@@ -267,7 +267,7 @@ module "server_function" {
 
   function_url = {
     create             = local.server_at_edge == false
-    authorization_type = var.server_function.deployment == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA" ? "AWS_IAM" : "NONE"
+    authorization_type = var.server_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA" ? "AWS_IAM" : "NONE"
   }
 
   providers = {
@@ -380,7 +380,7 @@ module "image_optimisation_function" {
 
   function_url = {
     create             = true
-    authorization_type = var.image_optimisation_function.deployment == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA" ? "AWS_IAM" : "NONE"
+    authorization_type = var.image_optimisation_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA" ? "AWS_IAM" : "NONE"
   }
 
   aliases = {

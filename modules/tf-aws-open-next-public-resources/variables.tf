@@ -55,8 +55,8 @@ variable "x_forwarded_host_function" {
 variable "auth_function" {
   description = "Configuration for the auth lambda@edge function"
   type = object({
-    deployment = optional(string, "NONE")
-    arn        = optional(string)
+    deployment    = optional(string, "NONE")
+    qualified_arn = optional(string)
     function_code = optional(object({
       handler = optional(string)
       zip = optional(object({
@@ -93,8 +93,13 @@ variable "auth_function" {
   default = {}
 
   validation {
-    condition     = contains(["NONE", "USE_EXISTING", "CREATE"], var.auth_function.deployment)
-    error_message = "The auth function deployment can be one of NONE, USE_EXISTING or CREATE"
+    condition     = contains(["NONE", "USE_EXISTING", "CREATE", "DETACH"], var.auth_function.deployment)
+    error_message = "The auth function deployment can be one of NONE, USE_EXISTING, CREATE or DETACH"
+  }
+
+  validation {
+    condition     = contains(["NONE", "CREATE", "DETACH"], var.auth_function.deployment) || (var.auth_function.deployment == "USE_EXISTING" && var.auth_function.qualified_arn != null)
+    error_message = "The auth function qualified ARN must be set when the deployment is set to USE_EXISTING"
   }
 }
 
@@ -112,6 +117,16 @@ variable "cache_policy" {
     query_string_behavior = optional(string, "all")
   })
   default = {}
+
+  validation {
+    condition     = contains(["USE_EXISTING", "CREATE"], var.cache_policy.deployment)
+    error_message = "The cache policy deployment can be one of USE_EXISTING or CREATE"
+  }
+
+  validation {
+    condition     = var.cache_policy.deployment == "CREATE" || (var.cache_policy.deployment == "USE_EXISTING" && var.cache_policy.arn != null)
+    error_message = "The cache policy ARN must be set when the deployment is set to USE_EXISTING"
+  }
 }
 
 variable "zones" {
@@ -457,7 +472,7 @@ variable "waf" {
       }))
     })))
     default_action = optional(object({
-      action = optional(string, "COUNT")
+      action = optional(string, "ALLOW")
       block_action = optional(object({
         response_code = number
         response_header = optional(object({
@@ -483,6 +498,16 @@ variable "waf" {
   validation {
     condition     = contains(["NONE", "USE_EXISTING", "CREATE"], var.waf.deployment)
     error_message = "The WAF deployment can be one of NONE, USE_EXISTING or CREATE"
+  }
+
+  validation {
+    condition     = contains(["NONE", "CREATE"], var.waf.deployment) || (var.waf.deployment == "USE_EXISTING" && var.waf.web_acl_id != null)
+    error_message = "The Web ACL ID must be set when the deployment is set to USE_EXISTING"
+  }
+
+  validation {
+    condition     = var.waf.default_action == null || contains(["ALLOW", "BLOCK"], var.waf.default_action.action)
+    error_message = "The WAF default action can be one of ALLOW or BLOCK"
   }
 }
 
@@ -527,8 +552,23 @@ variable "continuous_deployment" {
   })
 
   validation {
-    condition     = contains(["NONE", "ACTIVE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment)
+    condition     = var.continuous_deployment.use == false || (var.continuous_deployment.use == true && var.continuous_deployment.deployment != null)
+    error_message = "Deployment must be set when continuous deployment is used"
+  }
+
+  validation {
+    condition     = var.continuous_deployment.deployment == null || contains(["NONE", "ACTIVE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment)
     error_message = "The deployment strategy can be one of NONE, ACTIVE, DETACH or PROMOTE"
+  }
+
+  validation {
+    condition     = contains(["NONE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment) || (var.continuous_deployment.deployment == "ACTIVE" && var.continuous_deployment.traffic_config != null)
+    error_message = "The traffic config must be set when the deployment is set to active"
+  }
+
+  validation {
+    condition     = var.continuous_deployment.traffic_config == null || (var.continuous_deployment.traffic_config.header != null || var.continuous_deployment.traffic_config.weight != null)
+    error_message = "Either the header or weight traffic config needs to be set"
   }
 }
 

@@ -164,7 +164,7 @@ variable "server_function" {
       }))
     }))
     runtime                          = optional(string, "nodejs20.x")
-    deployment                       = optional(string, "REGIONAL_LAMBDA")
+    backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
     timeout                          = optional(number, 10)
     memory_size                      = optional(number, 1024)
     function_architecture            = optional(string)
@@ -194,8 +194,8 @@ variable "server_function" {
   default = {}
 
   validation {
-    condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA", "EDGE_LAMBDA"], var.server_function.deployment)
-    error_message = "The server function deployment can be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA, REGIONAL_LAMBDA or EDGE_LAMBDA"
+    condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA", "EDGE_LAMBDA"], var.server_function.backend_deployment_type)
+    error_message = "The server function backend deployment type can be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA, REGIONAL_LAMBDA or EDGE_LAMBDA"
   }
 }
 
@@ -216,7 +216,7 @@ variable "image_optimisation_function" {
       }))
     }))
     runtime                          = optional(string, "nodejs20.x")
-    deployment                       = optional(string, "REGIONAL_LAMBDA")
+    backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
     timeout                          = optional(number, 25)
     memory_size                      = optional(number, 1536)
     additional_environment_variables = optional(map(string), {})
@@ -246,8 +246,8 @@ variable "image_optimisation_function" {
   default = {}
 
   validation {
-    condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA"], var.image_optimisation_function.deployment)
-    error_message = "The server function deployment can be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA or REGIONAL_LAMBDA"
+    condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA"], var.image_optimisation_function.backend_deployment_type)
+    error_message = "The server function backend deployment type can be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA or REGIONAL_LAMBDA"
   }
 }
 
@@ -342,8 +342,8 @@ variable "distribution" {
       code    = optional(string)
     }), {})
     auth_function = optional(object({
-      deployment = optional(string, "NONE")
-      arn        = optional(string)
+      deployment    = optional(string, "NONE")
+      qualified_arn = optional(string)
       function_code = optional(object({
         handler = optional(string)
         zip = optional(object({
@@ -696,7 +696,7 @@ variable "waf" {
       }))
     })))
     default_action = optional(object({
-      action = optional(string, "COUNT")
+      action = optional(string, "ALLOW")
       block_action = optional(object({
         response_code = number
         response_header = optional(object({
