@@ -4,7 +4,7 @@ This module deploys a next.js website using [Open Next](https://github.com/serve
 
 This repo contains modules that let you build single-zone or multi-zone websites.
 
-As part of v2 of the module, the monolithic [legacy](./modules/legacy) module was broken down into multiple modules to allow for greater configuration and deployment options. For some workloads, i.e. using open next 1.x or existing workloads, you must use the [legacy](./modules/legacy) module. Please see the [README](./modules/legacy/README.md) in that folder for the installation instructions
+As part of v2 of the module, the monolithic [legacy](./modules/legacy) module was broken down into multiple modules to allow for additional configuration and deployment options. For some workloads, i.e. using open next 1.x or existing workloads, you must use the [legacy](./modules/legacy) module. 
 
 If you want to take advantage of some of the new features, such as:
 
@@ -18,14 +18,14 @@ If you want to take advantage of some of the new features, such as:
   - AWS Blog - https://aws.amazon.com/blogs/compute/protecting-an-aws-lambda-function-url-with-amazon-cloudfront-and-lambdaedge/
 - WAF
     - Includes AWS recommended rules (AWSManagedRulesAmazonIpReputationList, AWSManagedRulesCommonRuleSet & AWSManagedRulesKnownBadInputsRuleSet)
-    - Configure multiple IP rate based rules
+    - Configure multiple IP rate-based rules
     - Configure SQL injection rules
     - Configure account takeover protection rules
     - Configure account creation fraud prevention rules
     - Configure basic auth 
-        - This is inspired by Vercel's password protected deployment feature - https://vercel.com/guides/how-do-i-add-password-protection-to-my-vercel-deployment
+        - This is inspired by Vercel's password-protected deployment feature - https://vercel.com/guides/how-do-i-add-password-protection-to-my-vercel-deployment
         - Credit to Shinji Nakamatu for this idea - https://dev.to/snaka/implementing-secure-access-control-using-aws-waf-with-ip-address-and-basic-authentication-45hn
-    - Custom rules (with custom response bodies) i.e. add a maintainance page to take the website offline when maintainance is taking place
+    - Custom rules (with custom response bodies) i.e. add a maintenance page to take the website offline when maintenance is taking place
         - Credit to Paul L for this idea - https://repost.aws/questions/QUeXIw1g0hSxiF0BpugsT7aw/how-to-implement-the-maintenance-page-using-route-53-to-switch-between-cloudfront-distributions
     - Configure default action (with custom response bodies)
 - Custom Error Pages
@@ -39,6 +39,27 @@ If you only plan on using a single-zone deployment model, please use the [tf-aws
 Where possible, the modules try to give you as many configuration options as possible; however, the module won't be able to cater for all use cases, so for the majority of components, you can curate your bespoke resources in Terraform, i.e. WAF, CloudFront distribution, etc. and pass the ARN of the resource to the module to use.
 
 The module is available in the [Terraform registry](https://registry.terraform.io/modules/RJPearson94/open-next/aws/latest)
+
+## Upgrading
+
+### From 1.x to 2.x
+
+#### Use v1/ legacy module
+
+The v1, also known as the legacy module, has been kept to ensure that you can continue to use the module and receive some updates (will be determined on a case-by-case basis); you may want to use this instead of adopting the newer features. To use the legacy module, please add the following code. The existing variables and inputs have been retained.
+
+```tf
+module "legacy" {
+  source  = "RJPearson94/open-next/aws//modules/legacy"
+  version = ">= 2.0.0, < 3.0.0"
+
+  ... 
+}
+```
+
+#### Use new single-zone or multi-zone module
+
+When upgrading to v2 of the module, it is recommended that you redeploy your application into a new Terraform state and then shift traffic over due to the number of changes compared to the legacy module. If this is not possible, you can attempt to import the existing resources into your terraform state. See the [terraform docs](https://developer.hashicorp.com/terraform/language/state/import) for more information
 
 ## Deployment options
 
