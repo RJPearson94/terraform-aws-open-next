@@ -57,11 +57,12 @@ variable "bucket_name" {
 }
 
 variable "additional_files" {
-  description = "Allow additional files to be uploaded to the bucket. All files will be added as per the s3_path_prefix"
+  description = "Allow additional files to be uploaded to the bucket. All files will be added as per the s3_path_prefix which can also be overridden"
   type = list(object({
-    name        = string
-    source      = string
-    path_prefix = string
+    name           = string
+    source         = string
+    path_prefix    = string
+    s3_path_prefix = optional(string)
   }))
   default = []
 }

@@ -15,32 +15,33 @@ locals {
   custom_error_responses = [for custom_error_response in var.custom_error_responses : merge(custom_error_response, { path_pattern = "/${custom_error_response.response_page.behaviour}/*" }) if custom_error_response.response_page != null]
 
   # Force the root zone to the bottom of the behaviours
-  zones = concat([for zone in var.zones : zone if zone.root == false], [for zone in var.zones : zone if zone.root == true])
+  zones      = concat([for zone in var.zones : zone if zone.root == false], [for zone in var.zones : zone if zone.root == true])
+  root_zones = [for zone in local.zones : zone if zone.root == true][0]
 
   ordered_cache_behaviors = concat(
     [
       for custom_error_response in local.custom_error_responses : {
         path_pattern     = custom_error_response.path_pattern
-        allowed_methods  = coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].allowed_methods, null), try(var.behaviours.custom_error_pages.allowed_methods, null), ["GET", "HEAD", "OPTIONS"])
-        cached_methods   = coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].cached_methods, null), try(var.behaviours.custom_error_pages.cached_methods, null), ["GET", "HEAD", "OPTIONS"])
+        allowed_methods  = coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].allowed_methods, null), try(var.behaviours.custom_error_responses.allowed_methods, null), ["GET", "HEAD", "OPTIONS"])
+        cached_methods   = coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].cached_methods, null), try(var.behaviours.custom_error_responses.cached_methods, null), ["GET", "HEAD", "OPTIONS"])
         target_origin_id = join("-", compact([custom_error_response.error_code, local.s3_origin_id]))
 
-        cache_policy_id          = coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].cache_policy_id, null), try(var.behaviours.custom_error_pages.cache_policy_id, null), data.aws_cloudfront_cache_policy.caching_optimized.id)
-        origin_request_policy_id = try(coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].origin_request_policy_id, null), try(var.behaviours.custom_error_pages.origin_request_policy_id, null)), null)
+        cache_policy_id          = coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].cache_policy_id, null), try(var.behaviours.custom_error_responses.cache_policy_id, null), data.aws_cloudfront_cache_policy.caching_optimized.id)
+        origin_request_policy_id = try(coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].origin_request_policy_id, null), try(var.behaviours.custom_error_responses.origin_request_policy_id, null)), null)
 
-        compress               = coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].compress, null), try(var.behaviours.custom_error_pages.compress, null), true)
-        viewer_protocol_policy = coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].viewer_protocol_policy, null), try(var.behaviours.custom_error_pages.viewer_protocol_policy, null), "redirect-to-https")
+        compress               = coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].compress, null), try(var.behaviours.custom_error_responses.compress, null), true)
+        viewer_protocol_policy = coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].viewer_protocol_policy, null), try(var.behaviours.custom_error_responses.viewer_protocol_policy, null), "redirect-to-https")
 
         function_associations = [
-          merge(coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].viewer_request, null), try(var.behaviours.custom_error_pages.viewer_request, null), { type = "CLOUDFRONT_FUNCTION", arn = null }), { event_type = "viewer-request" }),
-          merge(coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].viewer_response, null), try(var.behaviours.custom_error_pages.viewer_response, null), { type = "CLOUDFRONT_FUNCTION", arn = null }), { event_type = "viewer-response" }),
+          merge(coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].viewer_request, null), try(var.behaviours.custom_error_responses.viewer_request, null), { type = "CLOUDFRONT_FUNCTION", arn = null }), { event_type = "viewer-request" }),
+          merge(coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].viewer_response, null), try(var.behaviours.custom_error_responses.viewer_response, null), { type = "CLOUDFRONT_FUNCTION", arn = null }), { event_type = "viewer-response" }),
         ]
 
         lambda_function_associations = [
-          merge(coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].viewer_request, null), try(var.behaviours.custom_error_pages.viewer_request, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-request" }),
-          merge(coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].viewer_response, null), try(var.behaviours.custom_error_pages.viewer_response, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-response" }),
-          merge(coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].origin_request, null), try(var.behaviours.custom_error_pages.origin_request, null), { arn = null }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
-          merge(coalesce(try(var.behaviours.custom_error_pages.path_overrides[custom_error_response.path_pattern].origin_response, null), try(var.behaviours.custom_error_pages.origin_response, null), { arn = null }), { type = "LAMBDA@EDGE", event_type = "origin-response" }),
+          merge(coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].viewer_request, null), try(var.behaviours.custom_error_responses.viewer_request, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-request" }),
+          merge(coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].viewer_response, null), try(var.behaviours.custom_error_responses.viewer_response, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-response" }),
+          merge(coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].origin_request, null), try(var.behaviours.custom_error_responses.origin_request, null), { arn = null }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
+          merge(coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].origin_response, null), try(var.behaviours.custom_error_responses.origin_response, null), { arn = null }), { type = "LAMBDA@EDGE", event_type = "origin-response" }),
         ]
       }
     ],
@@ -129,7 +130,7 @@ locals {
         domain_name              = custom_error_response.bucket_domain_name
         origin_access_control_id = aws_cloudfront_origin_access_control.website_origin_access_control.id
         origin_id                = join("-", compact([custom_error_response.error_code, local.s3_origin_id]))
-        origin_path              = "/${custom_error_response.response_page.folder_path}"
+        origin_path              = "${local.root_zones.path != null ? "/${local.root_zones.path}" : ""}/${custom_error_response.response_page.folder_path}"
         origin_headers           = null
         custom_origin_config     = null
       }
@@ -276,7 +277,7 @@ locals {
         not                   = true
         positional_constraint = "EXACTLY"
         // There was a bug in Terraform v1.6.0 which causes this not to work, please upgrade to at least v1.6.1
-        search_string = "Basic ${var.waf.enforce_basic_auth.credentials.mark_as_sensitive == false ?  base64encode("${var.waf.enforce_basic_auth.credentials.username}:${var.waf.enforce_basic_auth.credentials.password}") : sensitive(base64encode("${var.waf.enforce_basic_auth.credentials.username}:${var.waf.enforce_basic_auth.credentials.password}"))}"
+        search_string = "Basic ${var.waf.enforce_basic_auth.credentials.mark_as_sensitive == false ? base64encode("${var.waf.enforce_basic_auth.credentials.username}:${var.waf.enforce_basic_auth.credentials.password}") : sensitive(base64encode("${var.waf.enforce_basic_auth.credentials.username}:${var.waf.enforce_basic_auth.credentials.password}"))}"
         field_to_match = {
           single_header = {
             name = var.waf.enforce_basic_auth.header_name
@@ -540,7 +541,7 @@ resource "aws_cloudfront_distribution" "website_distribution" {
     content {
       error_code            = custom_error_response.value.error_code
       error_caching_min_ttl = try(custom_error_response.value.error_caching_min_ttl, null)
-      response_code         = try(custom_error_response.value.response_code, null)
+      response_code         = coalesce(try(custom_error_response.value.response_code, null), custom_error_response.value.error_code)
       response_page_path    = try(custom_error_response.value.response_page, null) != null ? "/${custom_error_response.value.response_page.behaviour}/${custom_error_response.value.response_page.name}" : null
     }
   }
@@ -684,7 +685,7 @@ resource "aws_cloudfront_distribution" "production_distribution" {
     content {
       error_code            = custom_error_response.value.error_code
       error_caching_min_ttl = try(custom_error_response.value.error_caching_min_ttl, null)
-      response_code         = try(custom_error_response.value.response_code, null)
+      response_code         = coalesce(try(custom_error_response.value.response_code, null), custom_error_response.value.error_code)
       response_page_path    = try(custom_error_response.value.response_page, null) != null ? "/${custom_error_response.value.response_page.folder_path}/${custom_error_response.value.response_page.name}" : null
     }
   }
@@ -692,7 +693,7 @@ resource "aws_cloudfront_distribution" "production_distribution" {
   aliases = local.aliases
 
   lifecycle {
-    ignore_changes = [origin, ordered_cache_behavior, default_cache_behavior]
+    ignore_changes = [origin, ordered_cache_behavior, default_cache_behavior, custom_error_response]
   }
 }
 
@@ -837,7 +838,7 @@ resource "aws_cloudfront_distribution" "staging_distribution" {
     content {
       error_code            = custom_error_response.value.error_code
       error_caching_min_ttl = try(custom_error_response.value.error_caching_min_ttl, null)
-      response_code         = try(custom_error_response.value.response_code, null)
+      response_code         = coalesce(try(custom_error_response.value.response_code, null), custom_error_response.value.error_code)
       response_page_path    = try(custom_error_response.value.response_page, null) != null ? "/${custom_error_response.value.response_page.folder_path}/${custom_error_response.value.response_page.name}" : null
     }
   }

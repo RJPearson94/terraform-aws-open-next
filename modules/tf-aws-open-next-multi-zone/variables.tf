@@ -98,7 +98,7 @@ variable "warmer_function" {
       concurrency = optional(number)
     }))
     function_code = optional(object({
-      handler = optional(string)
+      handler = optional(string, "index.handler")
       zip = optional(object({
         path = string
         hash = string
@@ -145,7 +145,7 @@ variable "server_function" {
   description = "Configuration for the server function. This can be overridden for each zone"
   type = object({
     function_code = optional(object({
-      handler = optional(string)
+      handler = optional(string, "index.handler")
       zip = optional(object({
         path = string
         hash = string
@@ -192,7 +192,7 @@ variable "image_optimisation_function" {
   type = object({
     create = optional(bool, true)
     function_code = optional(object({
-      handler = optional(string)
+      handler = optional(string, "index.handler")
       zip = optional(object({
         path = string
         hash = string
@@ -238,7 +238,7 @@ variable "revalidation_function" {
   description = "Configuration for the revalidation function. This can be overridden for each zone"
   type = object({
     function_code = optional(object({
-      handler = optional(string)
+      handler = optional(string, "index.handler")
       zip = optional(object({
         path = string
         hash = string
@@ -325,7 +325,7 @@ variable "distribution" {
       deployment    = optional(string, "NONE")
       qualified_arn = optional(string)
       function_code = optional(object({
-        handler = optional(string)
+        handler = optional(string, "index.handler")
         zip = optional(object({
           path = string
           hash = string
@@ -370,7 +370,7 @@ variable "prefix_path_overrides" {
 variable "behaviours" {
   description = "Override the default behaviour config. When the deployment is set to 'INDEPENDENT_ZONES' this can be overridden for each zone. If deployment is 'SHARED_DISTRIBUTION' or 'SHARED_DISTRIBUTION_AND_BUCKET' this configuration is used"
   type = object({
-    custom_error_pages = optional(object({
+    custom_error_responses = optional(object({
       path_overrides = optional(map(object({
         allowed_methods          = optional(list(string))
         cached_methods           = optional(list(string))
@@ -750,7 +750,7 @@ variable "continuous_deployment" {
 }
 
 variable "custom_error_responses" {
-  description = "Allow custom error responses to be set on the distributions. When the deployment is set to 'INDEPENDENT_ZONES' this can be overridden for each zone. If deployment is 'SHARED_DISTRIBUTION' or 'SHARED_DISTRIBUTION_AND_BUCKET' this configuration is used, also if the deployment is 'SHARED_DISTRIBUTION', the files are saved into the root zone bucket"
+  description = "Allow custom error responses to be set on the distributions. When the deployment is set to 'INDEPENDENT_ZONES' this can be overridden for each zone. If deployment is 'SHARED_DISTRIBUTION' or 'SHARED_DISTRIBUTION_AND_BUCKET' this configuration is used. If the deployment is 'SHARED_DISTRIBUTION', the files are saved into the root zone bucket. If the deployment is 'SHARED_DISTRIBUTION_AND_BUCKET' the files are saved in the shared bucket"
   type = list(object({
     error_code            = string
     error_caching_min_ttl = optional(number)
@@ -805,7 +805,7 @@ variable "zones" {
         concurrency = optional(number)
       }))
       function_code = optional(object({
-        handler = optional(string)
+        handler = optional(string, "index.handler")
         zip = optional(object({
           path = string
           hash = string
@@ -847,7 +847,7 @@ variable "zones" {
     }))
     server_function = optional(object({
       function_code = optional(object({
-        handler = optional(string)
+        handler = optional(string, "index.handler")
         zip = optional(object({
           path = string
           hash = string
@@ -889,7 +889,7 @@ variable "zones" {
     image_optimisation_function = optional(object({
       create = optional(bool, true)
       function_code = optional(object({
-        handler = optional(string)
+        handler = optional(string, "index.handler")
         zip = optional(object({
           path = string
           hash = string
@@ -930,7 +930,7 @@ variable "zones" {
     }))
     revalidation_function = optional(object({
       function_code = optional(object({
-        handler = optional(string)
+        handler = optional(string, "index.handler")
         zip = optional(object({
           path = string
           hash = string
@@ -1002,7 +1002,7 @@ variable "zones" {
         deployment    = optional(string, "NONE")
         qualified_arn = optional(string)
         function_code = optional(object({
-          handler = optional(string)
+          handler = optional(string, "index.handler")
           zip = optional(object({
             path = string
             hash = string
@@ -1036,7 +1036,7 @@ variable "zones" {
       }), {})
     }))
     behaviours = optional(object({
-      custom_error_pages = optional(object({
+      custom_error_responses = optional(object({
         path_overrides = optional(map(object({
           allowed_methods          = optional(list(string))
           cached_methods           = optional(list(string))

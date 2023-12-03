@@ -31,7 +31,7 @@ locals {
     reinvalidation_hash            = sha1(join("-", concat(module.s3_assets.file_hashes, [module.server_function.version])))
   }
 
-  user_supplied_behaviours = coalesce(var.behaviours, { custom_error_pages = null, static_assets = null, server = null, image_optimisation = null })
+  user_supplied_behaviours = coalesce(var.behaviours, { custom_error_responses = null, static_assets = null, server = null, image_optimisation = null })
   behaviours = merge(local.user_supplied_behaviours, {
     static_assets = merge(coalesce(local.user_supplied_behaviours.static_assets, { paths = null, additional_paths = null, path_overrides = null, allowed_methods = null, cached_methods = null, cache_policy_id = null, origin_request_policy_id = null, compress = null, viewer_protocol_policy = null, viewer_request = null, viewer_response = null, origin_request = null, origin_response = null }), {
       additional_paths = try(coalesce(try(local.user_supplied_behaviours.static_assets.additional_paths, null), module.s3_assets.cloudfront_asset_mappings), [])
@@ -172,7 +172,7 @@ module "s3_assets" {
   force_destroy = var.website_bucket.force_destroy
   remove_folder = var.continuous_deployment.use && var.continuous_deployment.deployment != "NONE"
 
-  additional_files = [for custom_error_response in var.custom_error_responses : merge(custom_error_response.response_page, { name = "${custom_error_response.error_code}.html" }) if custom_error_response.response_page != null]
+  additional_files = [for custom_error_response in var.custom_error_responses : merge(custom_error_response.response_page, { name = "${custom_error_response.error_code}.html", s3_path_prefix = local.staging_alias }) if custom_error_response.response_page != null]
 
   s3_path_prefix = join("/", compact([var.s3_folder_prefix, local.staging_alias]))
   zone_suffix    = var.zone_suffix

@@ -8,6 +8,11 @@ output "arn" {
   value       = var.continuous_deployment.use ? one(aws_cloudfront_distribution.production_distribution[*].arn) : one(aws_cloudfront_distribution.website_distribution[*].arn)
 }
 
+output "id" {
+  description = "The ID for the cloudfront distribution"
+  value       = var.continuous_deployment.use ? one(aws_cloudfront_distribution.production_distribution[*].id) : one(aws_cloudfront_distribution.website_distribution[*].id)
+}
+
 output "etag" {
   description = "The etag for the cloudfront distribution"
   value       = var.continuous_deployment.use ? coalesce(try(one(terraform_data.promote_distribution[*].output.etag), null), one(aws_cloudfront_distribution.production_distribution[*].etag)) : one(aws_cloudfront_distribution.website_distribution[*].etag)
@@ -21,6 +26,11 @@ output "staging_etag" {
 output "staging_arn" {
   description = "The arn for the cloudfront staging distribution"
   value       = try(one(aws_cloudfront_distribution.staging_distribution[*].arn), null)
+}
+
+output "staging_id" {
+  description = "The ID for the cloudfront staging distribution"
+  value       = try(one(aws_cloudfront_distribution.staging_distribution[*].id), null)
 }
 
 output "aliases" {

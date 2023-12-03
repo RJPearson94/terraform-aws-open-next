@@ -22,7 +22,7 @@ locals {
 
   additional_files = [for file in var.additional_files : {
     file   = file.name
-    key    = join("/", [var.s3_path_prefix, "custom", file.path_prefix, file.name])
+    key    = join("/", [coalesce(file.s3_path_prefix, var.s3_path_prefix), "custom", file.path_prefix, file.name])
     source = file.source
     md5    = filemd5(file.source)
   }]

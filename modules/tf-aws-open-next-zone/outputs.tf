@@ -33,6 +33,16 @@ output "cloudfront_url" {
   value       = local.create_distribution ? one(module.public_resources[*].url) : null
 }
 
+output "cloudfront_distribution_id" {
+  description = "The ID for the cloudfront distribution"
+  value       = local.create_distribution ? one(module.public_resources[*].id) : null
+}
+
+output "cloudfront_staging_distribution_id" {
+  description = "The ID for the cloudfront staging distribution"
+  value       = local.create_distribution ? one(module.public_resources[*].staging_id) : null
+}
+
 output "alternate_domain_names" {
   description = "Extra CNAMEs (alternate domain names) associated with the cloudfront distribution"
   value       = local.create_distribution ? one(module.public_resources[*].aliases) : null

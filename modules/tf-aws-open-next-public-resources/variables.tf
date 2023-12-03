@@ -58,7 +58,7 @@ variable "auth_function" {
     deployment    = optional(string, "NONE")
     qualified_arn = optional(string)
     function_code = optional(object({
-      handler = optional(string)
+      handler = optional(string, "index.handler")
       zip = optional(object({
         path = string
         hash = string
@@ -139,11 +139,11 @@ variable "zones" {
     bucket_domain_name             = string
     bucket_origin_path             = string
     reinvalidation_hash            = string
+    server_at_edge                 = bool
+    use_auth_lambda                = bool
     image_optimisation_domain_name = optional(string)
     path                           = optional(string)
-    server_at_edge                 = optional(bool)
     server_origin_headers          = optional(map(string))
-    use_auth_lambda                = optional(bool)
   }))
 
   validation {
@@ -152,7 +152,7 @@ variable "zones" {
   }
 
   validation {
-    condition     = length([for zone in var.zones: zone if zone.root == true]) == 1
+    condition     = length([for zone in var.zones : zone if zone.root == true]) == 1
     error_message = "There must be exactly 1 root zone"
   }
 }
@@ -160,7 +160,7 @@ variable "zones" {
 variable "behaviours" {
   description = "Override the default behaviour config"
   type = object({
-    custom_error_pages = optional(object({
+    custom_error_responses = optional(object({
       path_overrides = optional(map(object({
         allowed_methods          = optional(list(string))
         cached_methods           = optional(list(string))
@@ -598,17 +598,17 @@ variable "continuous_deployment" {
   }
 
   validation {
-    condition     = anytrue([var.continuous_deployment.use == false, var.continuous_deployment.deployment == null, contains(["NONE", "ACTIVE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment)])
+    condition     = (var.continuous_deployment.use == false || var.continuous_deployment.deployment == null) ? true : contains(["NONE", "ACTIVE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment)
     error_message = "The deployment strategy can be one of NONE, ACTIVE, DETACH or PROMOTE"
   }
 
   validation {
-    condition     = anytrue([var.continuous_deployment.use == false, contains(["NONE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment), (var.continuous_deployment.deployment == "ACTIVE" && var.continuous_deployment.traffic_config != null)])
+    condition     = anytrue([var.continuous_deployment.use == false || var.continuous_deployment.deployment == null ? true : contains(["NONE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment)]) ? true : (var.continuous_deployment.deployment == "ACTIVE" && var.continuous_deployment.traffic_config != null)
     error_message = "The traffic config must be set when the deployment is set to active"
   }
 
   validation {
-    condition     = anytrue([var.continuous_deployment.use == false, contains(["NONE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment), var.continuous_deployment.traffic_config == null ? true : (var.continuous_deployment.traffic_config.header != null || var.continuous_deployment.traffic_config.weight != null)])
+    condition     = anytrue([var.continuous_deployment.use == false, var.continuous_deployment.deployment == null ? true : contains(["NONE", "DETACH", "PROMOTE"], var.continuous_deployment.deployment), var.continuous_deployment.traffic_config == null]) ? true : (var.continuous_deployment.traffic_config.header != null || var.continuous_deployment.traffic_config.weight != null)
     error_message = "Either the header or weight traffic config needs to be set"
   }
 }

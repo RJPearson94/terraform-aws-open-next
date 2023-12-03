@@ -105,7 +105,7 @@ variable "warmer_function" {
       concurrency = optional(number)
     }))
     function_code = optional(object({
-      handler = optional(string)
+      handler = optional(string, "index.handler")
       zip = optional(object({
         path = string
         hash = string
@@ -152,7 +152,7 @@ variable "server_function" {
   description = "Configuration for the server function"
   type = object({
     function_code = optional(object({
-      handler = optional(string)
+      handler = optional(string, "index.handler")
       zip = optional(object({
         path = string
         hash = string
@@ -204,7 +204,7 @@ variable "image_optimisation_function" {
   type = object({
     create = optional(bool, true)
     function_code = optional(object({
-      handler = optional(string)
+      handler = optional(string, "index.handler")
       zip = optional(object({
         path = string
         hash = string
@@ -255,7 +255,7 @@ variable "revalidation_function" {
   description = "Configuration for the revalidation function"
   type = object({
     function_code = optional(object({
-      handler = optional(string)
+      handler = optional(string, "index.handler")
       zip = optional(object({
         path = string
         hash = string
@@ -345,7 +345,7 @@ variable "distribution" {
       deployment    = optional(string, "NONE")
       qualified_arn = optional(string)
       function_code = optional(object({
-        handler = optional(string)
+        handler = optional(string, "index.handler")
         zip = optional(object({
           path = string
           hash = string
@@ -384,7 +384,7 @@ variable "distribution" {
 variable "behaviours" {
   description = "Override the default behaviour config"
   type = object({
-    custom_error_pages = optional(object({
+    custom_error_responses = optional(object({
       path_overrides = optional(map(object({
         allowed_methods          = optional(list(string))
         cached_methods           = optional(list(string))

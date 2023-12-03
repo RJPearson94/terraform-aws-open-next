@@ -38,6 +38,8 @@ If you only plan on using a single-zone deployment model, please use the [tf-aws
 
 Where possible, the modules try to give you as many configuration options as possible; however, the module won't be able to cater for all use cases, so for the majority of components, you can curate your bespoke resources in Terraform, i.e. WAF, CloudFront distribution, etc. and pass the ARN of the resource to the module to use.
 
+*Note:* These modules use multiple bash scripts to delete data, upload data and mutate resources outside of Terraform. This prevents Terraform from removing resources when they have changed and allows the staging distribution functionality to work correctly. You must have bash and the AWS CLI available, the CLI must be configured to use the same credentials or environment variables as the default AWS provider for this functionality to work correctly.
+
 The module is available in the [Terraform registry](https://registry.terraform.io/modules/RJPearson94/open-next/aws/latest)
 
 ## Upgrading

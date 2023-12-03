@@ -1,6 +1,6 @@
 # Continuous deployment
 
-For this functionality to work correctly, lifecycle rules have been added to the production distribution to ignore changes to origins, ordered_cache_behaviors and default_cache_behavior. For Terraform to be able to update the distribution, you will need to update the staging distribution and then promote the changes.
+For this functionality to work correctly, lifecycle rules have been added to the production distribution to ignore changes to origins, ordered_cache_behaviors, default_cache_behavior and custom_error_responses. For Terraform to be able to update the distribution, you will need to update the staging distribution and then promote the changes.
 
 ## Initial deployment
 
