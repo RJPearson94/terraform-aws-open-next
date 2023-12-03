@@ -12,6 +12,8 @@ assignees: ""
 - Terraform Version: [e.g. 0.12.26]
 - Provider Version [e.g. v0.1.0]
 - Module Version [e.g. v0.1.0]
+- Module Affected [e.g. tf-aws-open-next-zone]
+- Deployment Model [e.g. Single zone]
 
 ## Describe the bug
 
