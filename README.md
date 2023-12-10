@@ -76,14 +76,31 @@ Below are diagrams of the possible architecture combinations that can configured
 
 ### Single Zone
 
-![Single Zone Complete](./docs/diagrams/Single%20Zone.png)
+![Single Zone Complete](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.0.2/docs/diagrams/Single%20Zone.png)
 
+#### Terraform
 
 ```tf
+data "aws_caller_identity" "current" {}
+
 module "single_zone" {
   source  = "RJPearson94/open-next/aws//modules/tf-aws-open-next-zone"
   version = ">= 2.0.0, < 3.0.0"
 
+  prefix = "open-next-${data.aws_caller_identity.current.account_id}"
+  folder_path = "./.open-next"
+}
+```
+
+#### Terragrunt
+
+```hcl
+terraform {
+  source          = "tfr://registry.terraform.io/RJPearson94/open-next/aws//modules/tf-aws-open-next-zone?version=2.0.2"
+  include_in_copy = ["./.open-next"]
+}
+
+inputs = {
   prefix = "open-next-${get_aws_account_id()}"
   folder_path = "./.open-next"
 }
@@ -91,13 +108,41 @@ module "single_zone" {
 
 ### Multi-Zone - Independent Zones
 
-![Multi Zone - Independent Zones](./docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
+![Multi Zone - Independent Zones](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.0.2/docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
+
+#### Terraform
 
 ```tf
+data "aws_caller_identity" "current" {}
+
 module "independent_zones" {
   source  = "RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone"
   version = ">= 2.0.0, < 3.0.0"
 
+  prefix = "open-next-ind-${data.aws_caller_identity.current.account_id}"
+  deployment = "INDEPENDENT_ZONES"
+
+  zones = [{
+    root = true
+    name = "home"
+    folder_path = "./home/.open-next"
+  },{
+    root = false
+    name = "docs"
+    folder_path = "./docs/.open-next"
+  }]
+}
+```
+
+#### Terragrunt
+
+```hcl
+terraform {
+  source          = "tfr://registry.terraform.io/RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone?version=2.0.2"
+  include_in_copy = ["./docs/.open-next", "./home/.open-next"]
+}
+
+inputs = {
   prefix = "open-next-ind-${get_aws_account_id()}"
   deployment = "INDEPENDENT_ZONES"
 
@@ -117,13 +162,41 @@ _Note:_ If you use tools like Terragrunt or CDKTF, you can use the Single Zone m
 
 ### Multi-Zone - Shared Distribution
 
-![Multi Zone - Shared Distribution](./docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
+![Multi Zone - Shared Distribution](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.0.2/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
+
+#### Terraform
 
 ```tf
+data "aws_caller_identity" "current" {}
+
 module "shared_distribution" {
   source  = "RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone"
   version = ">= 2.0.0, < 3.0.0"
 
+  prefix = "open-next-sd-${data.aws_caller_identity.current.account_id}"
+  deployment = "SHARED_DISTRIBUTION"
+
+  zones = [{
+    root = true
+    name = "home"
+    folder_path = "./home/.open-next"
+  },{
+    root = false
+    name = "docs"
+    folder_path = "./docs/.open-next"
+  }]
+}
+```
+
+#### Terragrunt
+
+```hcl
+terraform {
+  source          = "tfr://registry.terraform.io/RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone?version=2.0.2"
+  include_in_copy = ["./docs/.open-next", "./home/.open-next"]
+}
+
+inputs = {
   prefix = "open-next-sd-${get_aws_account_id()}"
   deployment = "SHARED_DISTRIBUTION"
 
@@ -141,13 +214,41 @@ module "shared_distribution" {
 
 ### Multi-Zone - Shared Distribution and Bucket
 
-![Multi Zone - Shared Distribution](./docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
+![Multi Zone - Shared Distribution](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.0.2/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
+
+#### Terraform
 
 ```tf
+data "aws_caller_identity" "current" {}
+
 module "shared_distribution_and_bucket" {
   source  = "RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone"
   version = ">= 2.0.0, < 3.0.0"
 
+  prefix = "open-next-sb-${data.aws_caller_identity.current.account_id}"
+  deployment = "SHARED_DISTRIBUTION_AND_BUCKET"
+
+  zones = [{
+    root = true
+    name = "home"
+    folder_path = "./home/.open-next"
+  },{
+    root = false
+    name = "docs"
+    folder_path = "./docs/.open-next"
+  }]
+}
+```
+
+#### Terragrunt
+
+```hcl
+terraform {
+  source          = "tfr://registry.terraform.io/RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone?version=2.0.2"
+  include_in_copy = ["./docs/.open-next", "./home/.open-next"]
+}
+
+inputs = {
   prefix = "open-next-sb-${get_aws_account_id()}"
   deployment = "SHARED_DISTRIBUTION_AND_BUCKET"
 
@@ -165,4 +266,4 @@ module "shared_distribution_and_bucket" {
 
 ## Examples
 
-The examples have been moved to a separate repository to reduce the amount of code that Terraform downloads. You can find them at [terraform-aws-open-next-examples repo](https://github.com/RJPearson94/terraform-aws-open-next-examples)
+The examples have been moved to a separate repository to reduce the amount of code that Terraform downloads. You can find them at [RJPearson94/terraform-aws-open-next-examples repo](https://github.com/RJPearson94/terraform-aws-open-next-examples)
