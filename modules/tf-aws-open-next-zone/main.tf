@@ -83,6 +83,7 @@ module "public_resources" {
   geo_restrictions          = var.distribution.geo_restrictions
   x_forwarded_host_function = var.distribution.x_forwarded_host_function
   auth_function             = var.distribution.auth_function
+  cache_policy              = var.distribution.cache_policy
 
   behaviours            = local.behaviours
   waf                   = var.waf

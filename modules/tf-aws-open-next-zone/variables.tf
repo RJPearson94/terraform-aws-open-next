@@ -377,6 +377,17 @@ variable "distribution" {
         delete = optional(string)
       }), {})
     }), {})
+    cache_policy = optional(object({
+      deployment            = optional(string, "CREATE")
+      arn                   = optional(string)
+      default_ttl           = optional(number, 0)
+      max_ttl               = optional(number, 31536000)
+      min_ttl               = optional(number, 0)
+      cookie_behavior       = optional(string, "all")
+      header_behavior       = optional(string, "whitelist")
+      header_items          = optional(list(string), ["accept", "rsc", "next-router-prefetch", "next-router-state-tree", "next-url"])
+      query_string_behavior = optional(string, "all")
+    }), {})
   })
   default = {}
 }

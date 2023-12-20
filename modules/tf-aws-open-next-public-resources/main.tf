@@ -6,7 +6,7 @@ locals {
   image_optimisation_function_origin = "image-optimisation-function-origin"
   server_function_origin             = "server-function-origin"
 
-  create_cache_policy = var.cache_policy.deployment == "CREATE"
+  create_cache_policy = try(var.cache_policy.deployment, "CREATE") == "CREATE"
   cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : var.cache_policy.arn
 
   should_create_auth_lambda = contains(["DETACH", "CREATE"], var.auth_function.deployment) || (var.auth_function.deployment != "USE_EXISTING" && length({ for zone in local.zones : "distribution" => zone if try(zone.use_auth_lambda, false) == true }) > 0)
@@ -384,25 +384,25 @@ resource "aws_cloudfront_cache_policy" "cache_policy" {
   count = local.create_cache_policy ? 1 : 0
   name  = "${local.prefix}cache-policy${local.suffix}"
 
-  default_ttl = var.cache_policy.default_ttl
-  max_ttl     = var.cache_policy.max_ttl
-  min_ttl     = var.cache_policy.min_ttl
+  default_ttl = try(var.cache_policy.default_ttl, 0)
+  max_ttl     = try(var.cache_policy.max_ttl, 31536000)
+  min_ttl     = try(var.cache_policy.min_ttl, 0)
 
   parameters_in_cache_key_and_forwarded_to_origin {
     cookies_config {
-      cookie_behavior = var.cache_policy.cookie_behavior
+      cookie_behavior = try(var.cache_policy.cookie_behavior, "all")
     }
 
     headers_config {
-      header_behavior = var.cache_policy.header_behavior
+      header_behavior = try(var.cache_policy.header_behavior, "whitelist")
 
       headers {
-        items = var.cache_policy.header_items
+        items = try(var.cache_policy.header_items, ["accept", "rsc", "next-router-prefetch", "next-router-state-tree", "next-url"])
       }
     }
 
     query_strings_config {
-      query_string_behavior = var.cache_policy.query_string_behavior
+      query_string_behavior = try(var.cache_policy.query_string_behavior, "all")
     }
   }
 }
