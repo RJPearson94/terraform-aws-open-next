@@ -49,6 +49,11 @@ output "staging_distribution" {
 }
 
 output "waf" {
-  description = "The congiguration of the WAF ACL. These are added to aid with testing"
+  description = "The configuration of the WAF ACL. These are added to aid with testing"
   value       = try(one(aws_wafv2_web_acl.distribution_waf[*]), null)
+}
+
+output "cache_policy_id" {
+  description = "The default cache policy ID to associate with the distribution"
+  value       = local.cache_policy_id
 }

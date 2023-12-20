@@ -66,3 +66,22 @@ variable "additional_files" {
   }))
   default = []
 }
+
+variable "scripts" {
+  description = "Modify default script behaviours"
+  type = object({
+    interpreter                      = optional(string)
+    additional_environment_variables = optional(map(string))
+    file_sync_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    delete_folder_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+  })
+  default = {}
+}

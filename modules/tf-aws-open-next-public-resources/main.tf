@@ -7,7 +7,7 @@ locals {
   server_function_origin             = "server-function-origin"
 
   create_cache_policy = try(var.cache_policy.deployment, "CREATE") == "CREATE"
-  cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : var.cache_policy.arn
+  cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : try(coalesce(var.cache_policy.id, var.cache_policy.arn), null) 
 
   should_create_auth_lambda = contains(["DETACH", "CREATE"], var.auth_function.deployment) || (var.auth_function.deployment != "USE_EXISTING" && length({ for zone in local.zones : "distribution" => zone if try(zone.use_auth_lambda, false) == true }) > 0)
   auth_lambda_qualified_arn = var.auth_function.deployment == "USE_EXISTING" ? var.auth_function.qualified_arn : local.should_create_auth_lambda ? one(module.auth_function[*].qualified_arn) : null
@@ -893,11 +893,11 @@ resource "terraform_data" "invalidate_production_distribution" {
   ]
 
   provisioner "local-exec" {
-    command = "/bin/bash ${path.module}/scripts/invalidate-cloudfront.sh"
+    command = "${coalesce(try(var.scripts.invalidate_cloudfront_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${try(var.scripts.invalidate_cloudfront_script.path, "${path.module}/scripts/invalidate-cloudfront.sh")}"
 
-    environment = {
+    environment = merge({
       "CDN_ID" = var.continuous_deployment.use ? one(aws_cloudfront_distribution.production_distribution[*].id) : one(aws_cloudfront_distribution.website_distribution[*].id)
-    }
+    }, try(var.scripts.additional_environment_variables, {}), try(var.scripts.invalidate_cloudfront_script.additional_environment_variables, {}))
   }
 
   depends_on = [terraform_data.promote_distribution]
@@ -913,11 +913,11 @@ resource "terraform_data" "invalidate_staging_distribution" {
   ]
 
   provisioner "local-exec" {
-    command = "/bin/bash ${path.module}/scripts/invalidate-cloudfront.sh"
+    command = "${coalesce(try(var.scripts.invalidate_cloudfront_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${try(var.scripts.invalidate_cloudfront_script.path, "${path.module}/scripts/invalidate-cloudfront.sh")}"
 
-    environment = {
+    environment = merge({
       "CDN_ID" = one(aws_cloudfront_distribution.staging_distribution[*].id)
-    }
+    }, try(var.scripts.additional_environment_variables, {}), try(var.scripts.invalidate_cloudfront_script.additional_environment_variables, {}))
   }
 }
 
@@ -925,15 +925,14 @@ resource "terraform_data" "promote_distribution" {
   count = var.continuous_deployment.use && var.continuous_deployment.deployment == "PROMOTE" ? 1 : 0
 
   provisioner "local-exec" {
-    command = "/bin/bash ${path.module}/scripts/promote-distribution.sh"
+    command = "${coalesce(try(var.scripts.promote_distribution_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${try(var.scripts.promote_distribution_script.path, "${path.module}/scripts/promote-distribution.sh")}"
 
-    environment = {
-      "SCRIPT_FOLDER_PATH"  = "${path.module}/scripts"
+    environment = merge({
       "CDN_PRODUCTION_ID"   = one(aws_cloudfront_distribution.production_distribution[*].id)
       "CDN_PRODUCTION_ETAG" = one(aws_cloudfront_distribution.production_distribution[*].etag)
       "CDN_STAGING_ID"      = one(aws_cloudfront_distribution.staging_distribution[*].id)
       "CDN_STAGING_ETAG"    = one(aws_cloudfront_distribution.staging_distribution[*].etag)
-    }
+    }, try(var.scripts.additional_environment_variables, {}), try(var.scripts.promote_distribution_script.additional_environment_variables, {}))
   }
 }
 
@@ -942,11 +941,11 @@ resource "terraform_data" "remove_continuous_deployment_id" {
   count = var.continuous_deployment.use && var.continuous_deployment.deployment == "DETACH" ? 1 : 0
 
   provisioner "local-exec" {
-    command = "/bin/bash ${path.module}/scripts/remove-continuous-deployment-policy-id.sh"
+    command = "${coalesce(try(var.scripts.remove_continuous_deployment_policy_id_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${try(var.scripts.remove_continuous_deployment_policy_id_script.path, "${path.module}/scripts/remove-continuous-deployment-policy-id.sh")}"
 
-    environment = {
+    environment = merge({
       "CDN_PRODUCTION_ID" = one(aws_cloudfront_distribution.production_distribution[*].id)
-    }
+    }, try(var.scripts.additional_environment_variables, {}), try(var.scripts.remove_continuous_deployment_policy_id_script.additional_environment_variables, {}))
   }
 }
 

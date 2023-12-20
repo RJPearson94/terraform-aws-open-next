@@ -2,7 +2,7 @@ locals {
   should_create_isr_tag_mapping = var.tag_mapping_db.deployment == "CREATE"
   isr_tag_mapping_file_path     = "${var.folder_path}/dynamodb-provider/dynamodb-cache.json"
   isr_tag_mapping               = local.should_create_isr_tag_mapping && fileexists(local.isr_tag_mapping_file_path) ? jsondecode(file(local.isr_tag_mapping_file_path)) : []
-  isr_tag_mapping_with_tf_key   = [ for tag_mapping in local.isr_tag_mapping : merge(tag_mapping, { tf_key = length([for isr_tag_mapping in local.isr_tag_mapping : isr_tag_mapping if isr_tag_mapping.tag.S == tag_mapping.tag.S]) > 1 ? "${tag_mapping.tag.S}-${tag_mapping.path.S}" : tag_mapping.tag.S })]  
+  isr_tag_mapping_with_tf_key   = [for tag_mapping in local.isr_tag_mapping : merge(tag_mapping, { tf_key = length([for isr_tag_mapping in local.isr_tag_mapping : isr_tag_mapping if isr_tag_mapping.tag.S == tag_mapping.tag.S]) > 1 ? "${tag_mapping.tag.S}-${tag_mapping.path.S}" : tag_mapping.tag.S })]
   isr_tag_mapping_db_name       = local.should_create_isr_tag_mapping ? one(aws_dynamodb_table.isr_table[*].name) : null
   isr_tag_mapping_db_arn        = local.should_create_isr_tag_mapping ? one(aws_dynamodb_table.isr_table[*].arn) : null
 
@@ -29,7 +29,7 @@ locals {
     use_auth_lambda                = var.server_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA"
     bucket_domain_name             = local.website_bucket_domain_name
     bucket_origin_path             = "/${module.s3_assets.origin_asset_path}"
-    reinvalidation_hash            = sha1(join("-", concat(module.s3_assets.file_hashes, [module.server_function.version])))
+    reinvalidation_hash            = sha1(join("-", concat(module.s3_assets.file_hashes, [try(module.server_function.version, "")])))
   }
 
   user_supplied_behaviours = coalesce(var.behaviours, { custom_error_responses = null, static_assets = null, server = null, image_optimisation = null })
@@ -93,6 +93,7 @@ module "public_resources" {
 
   custom_error_responses = local.custom_error_responses
 
+  scripts = var.scripts
   providers = {
     aws     = aws.global
     aws.dns = aws.dns
@@ -118,12 +119,12 @@ resource "terraform_data" "update_aliases" {
   triggers_replace = [var.continuous_deployment.deployment, try(one(module.public_resources[*].etag), null)]
 
   provisioner "local-exec" {
-    command = "/bin/bash ${path.module}/scripts/update-parameter.sh"
+    command = "${coalesce(try(var.scripts.update_parameter_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${try(var.scripts.update_parameter_script.path, "${path.module}/scripts/update-parameter.sh")}"
 
-    environment = {
+    environment = merge({
       "PARAMETER_NAME" = one(module.open_next_aliases[*].parameter_name)
       "VALUE"          = jsonencode(one(module.open_next_aliases[*].updated_alias_mapping))
-    }
+    }, try(var.scripts.additional_environment_variables, {}), try(var.scripts.update_parameter_script.additional_environment_variables, {}))
   }
 }
 
@@ -178,6 +179,8 @@ module "s3_assets" {
 
   s3_path_prefix = join("/", compact([var.s3_folder_prefix, local.staging_alias]))
   zone_suffix    = var.zone_suffix
+
+  scripts = var.scripts
 }
 
 # Server Function
@@ -272,6 +275,8 @@ module "server_function" {
     authorization_type = var.server_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA" ? "AWS_IAM" : "NONE"
   }
 
+  scripts = var.scripts
+
   providers = {
     aws     = aws.server_function
     aws.iam = aws.iam
@@ -329,6 +334,8 @@ module "warmer_function" {
 
   schedule = var.warmer_function.schedule
   timeouts = var.warmer_function.timeouts
+
+  scripts = var.scripts
 
   providers = {
     aws.iam = aws.iam
@@ -393,6 +400,8 @@ module "image_optimisation_function" {
 
   timeouts = var.image_optimisation_function.timeouts
 
+  scripts = var.scripts
+
   providers = {
     aws.iam = aws.iam
   }
@@ -442,6 +451,8 @@ module "revalidation_function" {
 
   prefix = var.prefix
   suffix = var.suffix
+
+  scripts = var.scripts
 
   providers = {
     aws.iam = aws.iam
@@ -505,11 +516,11 @@ resource "terraform_data" "isr_table_item" {
   triggers_replace = [local.staging_alias, md5(jsonencode(each.value))]
 
   provisioner "local-exec" {
-    command = "/bin/bash ${path.module}/scripts/save-item-to-dynamo.sh"
+    command = "${coalesce(try(var.scripts.save_item_to_dynamo_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${try(var.scripts.save_item_to_dynamo_script.path, "${path.module}/scripts/save-item-to-dynamo.sh")}"
 
-    environment = {
+    environment = merge({
       "TABLE_NAME" = local.isr_tag_mapping_db_name
       "ITEM"       = jsonencode(merge(each.value, { alias = local.staging_alias }))
-    }
+    }, try(var.scripts.additional_environment_variables, {}), try(var.scripts.save_item_to_dynamo_script.additional_environment_variables, {}))
   }
 }

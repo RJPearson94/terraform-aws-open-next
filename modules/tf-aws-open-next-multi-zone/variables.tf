@@ -306,7 +306,7 @@ variable "website_bucket" {
 }
 
 variable "distribution" {
-  description = "Configuration for the CloudFront distribution. When the deployment is set to 'INDEPENDENT_ZONES' this can be overridden for each zone. If deployment is 'SHARED_DISTRIBUTION' or 'SHARED_DISTRIBUTION_AND_BUCKET' this configuration is used"
+  description = "Configuration for the CloudFront distribution. When the deployment is set to 'INDEPENDENT_ZONES' this can be overridden for each zone. If deployment is 'SHARED_DISTRIBUTION' or 'SHARED_DISTRIBUTION_AND_BUCKET' this configuration is used. NOTE: please use ID as ARN for the cache policy is deprecated"
   type = object({
     deployment   = optional(string, "CREATE")
     enabled      = optional(bool, true)
@@ -360,6 +360,7 @@ variable "distribution" {
     cache_policy = optional(object({
       deployment            = optional(string, "CREATE")
       arn                   = optional(string)
+      id                    = optional(string)
       default_ttl           = optional(number, 0)
       max_ttl               = optional(number, 31536000)
       min_ttl               = optional(number, 0)
@@ -775,7 +776,7 @@ variable "custom_error_responses" {
 }
 
 variable "zones" {
-  description = "The website zones to create"
+  description = "The website zones to create. NOTE: please use ID as ARN for the distribution cache policy is deprecated"
   type = list(object({
     root                  = bool
     name                  = string
@@ -1048,6 +1049,7 @@ variable "zones" {
       cache_policy = optional(object({
         deployment            = optional(string, "CREATE")
         arn                   = optional(string)
+        id                    = optional(string)
         default_ttl           = optional(number, 0)
         max_ttl               = optional(number, 31536000)
         min_ttl               = optional(number, 0)
@@ -1429,4 +1431,53 @@ variable "zones" {
       }))
     })))
   }))
+}
+
+variable "scripts" {
+  description = "Modify default script behaviours"
+  type = object({
+    interpreter                      = optional(string)
+    additional_environment_variables = optional(map(string))
+    delete_folder_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    file_sync_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    invalidate_cloudfront_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    promote_distribution_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    remove_continuous_deployment_policy_id_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    save_item_to_dynamo_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    update_alias_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    update_parameter_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+  })
+  default = {}
 }

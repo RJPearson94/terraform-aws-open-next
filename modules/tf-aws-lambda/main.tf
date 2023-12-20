@@ -72,13 +72,13 @@ resource "terraform_data" "update_alias" {
   triggers_replace = [aws_lambda_function.lambda_function.version, var.aliases.alias_to_update]
 
   provisioner "local-exec" {
-    command = "/bin/bash ${path.module}/scripts/update-alias.sh"
+    command = "${coalesce(try(var.scripts.update_alias_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${try(var.scripts.update_alias_script.path, "${path.module}/scripts/update-alias.sh")}"
 
-    environment = {
+    environment = merge({
       "FUNCTION_NAME"    = aws_lambda_function.lambda_function.function_name
       "FUNCTION_VERSION" = aws_lambda_function.lambda_function.version
       "FUNCTION_ALIAS"   = var.aliases.alias_to_update
-    }
+    }, try(var.scripts.additional_environment_variables, {}), try(var.scripts.update_alias_script.additional_environment_variables, {}))
   }
 
   depends_on = [aws_lambda_alias.lambda_alias]

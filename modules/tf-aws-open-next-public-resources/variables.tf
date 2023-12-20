@@ -104,10 +104,11 @@ variable "auth_function" {
 }
 
 variable "cache_policy" {
-  description = "Configuration for the CloudFront cache policy"
+  description = "Configuration for the CloudFront cache policy. NOTE: please use ID as ARN is deprecated"
   type = object({
     deployment            = optional(string, "CREATE")
     arn                   = optional(string)
+    id                    = optional(string)
     default_ttl           = optional(number, 0)
     max_ttl               = optional(number, 31536000)
     min_ttl               = optional(number, 0)
@@ -124,8 +125,8 @@ variable "cache_policy" {
   }
 
   validation {
-    condition     = anytrue([var.cache_policy.deployment == "CREATE", (var.cache_policy.deployment == "USE_EXISTING" && var.cache_policy.arn != null)])
-    error_message = "The cache policy ARN must be set when the deployment is set to USE_EXISTING"
+    condition     = anytrue([var.cache_policy.deployment == "CREATE", (var.cache_policy.deployment == "USE_EXISTING" && (var.cache_policy.arn != null || var.cache_policy.id != null))])
+    error_message = "The cache policy ID or ARN must be set when the deployment is set to USE_EXISTING. NOTE: please use ID as ARN is deprecated"
   }
 }
 
@@ -627,4 +628,28 @@ variable "custom_error_responses" {
     }))
   }))
   default = []
+}
+
+variable "scripts" {
+  description = "Modify default script behaviours"
+  type = object({
+    interpreter                      = optional(string)
+    additional_environment_variables = optional(map(string))
+    invalidate_cloudfront_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    promote_distribution_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    remove_continuous_deployment_policy_id_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+  })
+  default = {}
 }

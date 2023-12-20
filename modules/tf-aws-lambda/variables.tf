@@ -170,3 +170,17 @@ variable "schedule" {
   type        = string
   default     = null
 }
+
+variable "scripts" {
+  description = "Modify default script behaviours"
+  type = object({
+    interpreter                      = optional(string)
+    additional_environment_variables = optional(map(string))
+    update_alias_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+  })
+  default = {}
+}
