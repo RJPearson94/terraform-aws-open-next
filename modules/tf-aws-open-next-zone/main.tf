@@ -29,7 +29,7 @@ locals {
     use_auth_lambda                = var.server_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA"
     bucket_domain_name             = local.website_bucket_domain_name
     bucket_origin_path             = "/${module.s3_assets.origin_asset_path}"
-    reinvalidation_hash            = sha1(join("-", concat(module.s3_assets.file_hashes, [try(module.server_function.version, null)])))
+    reinvalidation_hash            = sha1(join("-", concat(module.s3_assets.file_hashes, [try(module.server_function.version, "")])))
   }
 
   user_supplied_behaviours = coalesce(var.behaviours, { custom_error_responses = null, static_assets = null, server = null, image_optimisation = null })
