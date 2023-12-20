@@ -326,7 +326,7 @@ variable "website_bucket" {
 }
 
 variable "distribution" {
-  description = "Configuration for the CloudFront distribution"
+  description = "Configuration for the CloudFront distribution. NOTE: please use ID as ARN for the cache policy is deprecated"
   type = object({
     deployment   = optional(string, "CREATE")
     enabled      = optional(bool, true)
@@ -380,6 +380,7 @@ variable "distribution" {
     cache_policy = optional(object({
       deployment            = optional(string, "CREATE")
       arn                   = optional(string)
+      id                    = optional(string)
       default_ttl           = optional(number, 0)
       max_ttl               = optional(number, 31536000)
       min_ttl               = optional(number, 0)

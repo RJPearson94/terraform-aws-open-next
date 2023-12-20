@@ -7,7 +7,7 @@ locals {
   server_function_origin             = "server-function-origin"
 
   create_cache_policy = try(var.cache_policy.deployment, "CREATE") == "CREATE"
-  cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : var.cache_policy.arn
+  cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : try(coalesce(var.cache_policy.id, var.cache_policy.arn), null) 
 
   should_create_auth_lambda = contains(["DETACH", "CREATE"], var.auth_function.deployment) || (var.auth_function.deployment != "USE_EXISTING" && length({ for zone in local.zones : "distribution" => zone if try(zone.use_auth_lambda, false) == true }) > 0)
   auth_lambda_qualified_arn = var.auth_function.deployment == "USE_EXISTING" ? var.auth_function.qualified_arn : local.should_create_auth_lambda ? one(module.auth_function[*].qualified_arn) : null

@@ -104,10 +104,11 @@ variable "auth_function" {
 }
 
 variable "cache_policy" {
-  description = "Configuration for the CloudFront cache policy"
+  description = "Configuration for the CloudFront cache policy. NOTE: please use ID as ARN is deprecated"
   type = object({
     deployment            = optional(string, "CREATE")
     arn                   = optional(string)
+    id                    = optional(string)
     default_ttl           = optional(number, 0)
     max_ttl               = optional(number, 31536000)
     min_ttl               = optional(number, 0)
@@ -124,8 +125,8 @@ variable "cache_policy" {
   }
 
   validation {
-    condition     = anytrue([var.cache_policy.deployment == "CREATE", (var.cache_policy.deployment == "USE_EXISTING" && var.cache_policy.arn != null)])
-    error_message = "The cache policy ARN must be set when the deployment is set to USE_EXISTING"
+    condition     = anytrue([var.cache_policy.deployment == "CREATE", (var.cache_policy.deployment == "USE_EXISTING" && (var.cache_policy.arn != null || var.cache_policy.id != null))])
+    error_message = "The cache policy ID or ARN must be set when the deployment is set to USE_EXISTING. NOTE: please use ID as ARN is deprecated"
   }
 }
 
