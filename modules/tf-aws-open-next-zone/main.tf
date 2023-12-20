@@ -2,6 +2,7 @@ locals {
   should_create_isr_tag_mapping = var.tag_mapping_db.deployment == "CREATE"
   isr_tag_mapping_file_path     = "${var.folder_path}/dynamodb-provider/dynamodb-cache.json"
   isr_tag_mapping               = local.should_create_isr_tag_mapping && fileexists(local.isr_tag_mapping_file_path) ? jsondecode(file(local.isr_tag_mapping_file_path)) : []
+  isr_tag_mapping_with_tf_key   = [ for tag_mapping in local.isr_tag_mapping : merge(tag_mapping, { tf_key = length([for isr_tag_mapping in local.isr_tag_mapping : isr_tag_mapping if isr_tag_mapping.tag.S == tag_mapping.tag.S]) > 1 ? "${tag_mapping.tag.S}-${tag_mapping.path.S}" : tag_mapping.tag.S })]  
   isr_tag_mapping_db_name       = local.should_create_isr_tag_mapping ? one(aws_dynamodb_table.isr_table[*].name) : null
   isr_tag_mapping_db_arn        = local.should_create_isr_tag_mapping ? one(aws_dynamodb_table.isr_table[*].arn) : null
 
@@ -499,7 +500,7 @@ resource "aws_dynamodb_table" "isr_table" {
 }
 
 resource "terraform_data" "isr_table_item" {
-  for_each = { for item in local.isr_tag_mapping : item.tag.S => item }
+  for_each = { for item in local.isr_tag_mapping_with_tf_key : item.tf_key => item }
 
   triggers_replace = [local.staging_alias, md5(jsonencode(each.value))]
 
