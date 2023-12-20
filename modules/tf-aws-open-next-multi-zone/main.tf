@@ -58,6 +58,8 @@ module "public_resources" {
 
   custom_error_responses = module.website_zone[local.root_zone_name].custom_error_responses
 
+  scripts = var.scripts
+
   providers = {
     aws     = aws.global
     aws.dns = aws.dns
@@ -134,6 +136,8 @@ module "website_zone" {
   domain_config          = try(coalesce(each.value.domain_config, var.domain_config), null)
   continuous_deployment  = coalesce(each.value.continuous_deployment, var.continuous_deployment)
   custom_error_responses = var.deployment == "INDEPENDENT_ZONES" ? try(coalesce(each.value.custom_error_responses, var.custom_error_responses), []) : each.value.root == true ? var.custom_error_responses : []
+
+  scripts = var.scripts
 
   providers = {
     aws.global          = aws.global

@@ -787,3 +787,52 @@ variable "custom_error_responses" {
   }))
   default = []
 }
+
+variable "scripts" {
+  description = "Modify default script behaviours"
+  type = object({
+    interpreter                      = optional(string)
+    additional_environment_variables = optional(map(string))
+    delete_folder_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    file_sync_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    invalidate_cloudfront_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    promote_distribution_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    remove_continuous_deployment_policy_id_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    save_item_to_dynamo_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    update_alias_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+    update_parameter_script = optional(object({
+      interpreter                      = optional(string)
+      path                             = optional(string)
+      additional_environment_variables = optional(map(string))
+    }))
+  })
+  default = {}
+}

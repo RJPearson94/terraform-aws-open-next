@@ -34,12 +34,12 @@ resource "terraform_data" "remove_folder" {
   triggers_replace = [var.s3_path_prefix, file("${local.assets_folder}/BUILD_ID")]
 
   provisioner "local-exec" {
-    command = "/bin/bash ${path.module}/scripts/delete-folder.sh"
+    command = "${coalesce(try(var.scripts.delete_folder_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${try(var.scripts.delete_folder_script.path, "${path.module}/scripts/delete-folder.sh")}"
 
-    environment = {
+    environment = merge({
       "BUCKET_NAME" = var.bucket_name
       "FOLDER"      = local.asset_key_prefix
-    }
+    }, try(var.scripts.additional_environment_variables, {}), try(var.scripts.delete_folder_script.additional_environment_variables, {}))
   }
 }
 
@@ -55,15 +55,15 @@ resource "terraform_data" "file_sync" {
   triggers_replace = [var.zone_suffix, var.s3_path_prefix, each.value.md5]
 
   provisioner "local-exec" {
-    command = "/bin/bash ${path.module}/scripts/sync-file.sh"
+    command = "${coalesce(try(var.scripts.file_sync_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${try(var.scripts.file_sync_script.path, "${path.module}/scripts/sync-file.sh")}"
 
-    environment = {
+    environment = merge({
       "BUCKET_NAME"   = var.bucket_name
       "KEY"           = each.value.key
       "SOURCE"        = each.value.source
       "CACHE_CONTROL" = try(each.value.cache_control, null)
       "CONTENT_TYPE"  = lookup(var.content_types.mapping, reverse(split(".", each.value.file))[0], var.content_types.default)
-    }
+    }, try(var.scripts.additional_environment_variables, {}), try(var.scripts.file_sync_script.additional_environment_variables, {}))
   }
 
   depends_on = [terraform_data.remove_folder]
