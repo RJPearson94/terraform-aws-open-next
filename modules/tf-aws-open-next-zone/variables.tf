@@ -163,6 +163,7 @@ variable "server_function" {
         object_version = optional(string)
       }))
     }))
+    enable_streaming                 = optional(bool, false)
     runtime                          = optional(string, "nodejs20.x")
     backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
     timeout                          = optional(number, 10)

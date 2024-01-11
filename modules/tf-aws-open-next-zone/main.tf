@@ -273,6 +273,7 @@ module "server_function" {
   function_url = {
     create             = local.server_at_edge == false
     authorization_type = var.server_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA" ? "AWS_IAM" : "NONE"
+    enable_streaming   = var.server_function.enable_streaming
   }
 
   scripts = var.scripts

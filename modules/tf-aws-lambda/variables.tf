@@ -115,6 +115,7 @@ variable "function_url" {
   type = object({
     create             = optional(bool, true)
     authorization_type = optional(string, "NONE")
+    enable_streaming   = optional(bool, false)
   })
   default = {}
 }
