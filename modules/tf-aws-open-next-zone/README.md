@@ -4,7 +4,7 @@ This module allows you to deploy a next.js website using [Open Next](https://git
 
 The module will allow you to configure the following resources.
 
-![Single Zone Complete](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.1.0/docs/diagrams/Single%20Zone.png)
+![Single Zone Complete](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.0/docs/diagrams/Single%20Zone.png)
 
 The following are optional:
 
