@@ -17,6 +17,11 @@ locals {
       paths = try(module.website_zone[zone.name].behaviours.server.paths, null)
     } }
   }
+  merged_additional_origins = {
+    zone_overrides = { for zone in local.zones : zone.name => {
+      paths = try(module.website_zone[zone.name].behaviours.additional_origins.paths, null)
+    } }
+  }
   merged_image_optimisation = {
     zone_overrides = { for zone in local.zones : zone.name => {
       paths = try(module.website_zone[zone.name].behaviours.image_optimisation.paths, null)
@@ -50,6 +55,7 @@ module "public_resources" {
     static_assets      = var.behaviours.static_assets == null ? local.merged_static_assets : merge(var.behaviours.static_assets, local.merged_static_assets)
     server             = var.behaviours.server == null ? local.merged_server : merge(var.behaviours.server, local.merged_server)
     image_optimisation = var.behaviours.image_optimisation == null ? local.merged_image_optimisation : merge(var.behaviours.image_optimisation, local.merged_image_optimisation)
+    additional_origins = var.behaviours.additional_origins == null ? local.merged_additional_origins : merge(var.behaviours.additional_origins, local.merged_additional_origins)
   })
 
   waf                   = var.waf
@@ -111,6 +117,8 @@ module "website_zone" {
 
   folder_path = each.value.folder_path
 
+  open_next_version = try(coalesce(each.value.open_next_version, var.open_next_version), null)
+
   zone_suffix                          = each.value.path
   s3_folder_prefix                     = var.deployment == "SHARED_DISTRIBUTION_AND_BUCKET" ? each.value.name : null
   s3_exclusion_regex                   = try(coalesce(each.value.s3_exclusion_regex, var.s3_exclusion_regex), null)
@@ -126,6 +134,8 @@ module "website_zone" {
   server_function             = try(coalesce(each.value.server_function, var.server_function), null)
   image_optimisation_function = try(coalesce(each.value.image_optimisation_function, var.image_optimisation_function), null)
   revalidation_function       = try(coalesce(each.value.revalidation_function, var.revalidation_function), null)
+  additional_server_functions = try(coalesce(each.value.additional_server_functions, var.additional_server_functions), null)
+  edge_functions              = try(coalesce(each.value.edge_functions, var.edge_functions), null)
 
   behaviours     = try(coalesce(each.value.behaviours, var.behaviours), null)
   tag_mapping_db = try(coalesce(each.value.tag_mapping_db, var.tag_mapping_db), null)

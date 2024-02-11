@@ -108,15 +108,15 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   count = var.run_at_edge == false ? 1 : 0
 
   name              = "/aws/lambda/${local.prefix}${var.function_name}${local.suffix}"
-  retention_in_days = var.cloudwatch_log.retention_in_days
+  retention_in_days = try(var.cloudwatch_log.retention_in_days, null)
 }
 
 # IAM
 
 resource "aws_iam_role" "lambda_iam" {
   name                 = "${local.prefix}${var.function_name}-role${local.suffix}"
-  path                 = var.iam.path
-  permissions_boundary = var.iam.permissions_boundary
+  path                 = try(var.iam.path, null)
+  permissions_boundary = try(var.iam.permissions_boundary, null)
 
   assume_role_policy = jsonencode({
     "Version" : "2012-10-17",
@@ -144,7 +144,7 @@ resource "aws_iam_role" "lambda_iam" {
 
 resource "aws_iam_policy" "lambda_policy" {
   name = "${local.prefix}${var.function_name}-lambda-policy${local.suffix}"
-  path = var.iam.path
+  path = try(var.iam.path, null)
 
   policy = jsonencode({
     "Version" : "2012-10-17",
@@ -199,7 +199,7 @@ resource "aws_iam_policy" "additional_policy" {
     for additional_iam_policy in var.additional_iam_policies : additional_iam_policy.name => additional_iam_policy if additional_iam_policy.policy != null
   }
   name = "${local.prefix}${var.function_name}-${each.key}${local.suffix}"
-  path = var.iam.path
+  path = try(var.iam.path, null)
 
   policy = each.value.policy
 
