@@ -1,6 +1,6 @@
 output "alias_details" {
   description = "The alias config"
-  value       = var.aliases != null ? null : one(module.open_next_aliases[*].updated_alias_mapping)
+  value       = local.aliases
 }
 
 output "bucket_name" {
@@ -20,7 +20,7 @@ output "zone_config" {
 
 output "behaviours" {
   description = "The behaviours for the zone"
-  value       = local.behaviours
+  value       = local.zone_behaviours
 }
 
 output "custom_error_responses" {

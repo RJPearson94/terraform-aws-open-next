@@ -12,6 +12,27 @@ locals {
   website_bucket_region        = local.should_create_website_bucket ? data.aws_region.current.name : var.website_bucket.region
   website_bucket_domain_name   = local.should_create_website_bucket ? one(aws_s3_bucket.bucket[*].bucket_regional_domain_name) : var.website_bucket.domain_name
 
+  open_next_versions = {
+    v2 = can(regex("^v2\\.[0-9x]+\\.[0-9x]+$", var.open_next_version)),
+    v3 = can(regex("^v3\\.[0-9x]+\\.[0-9x]+$", var.open_next_version)),
+  }
+  open_next_output_path         = "${var.folder_path}/open-next.output.json"
+  open_next_path_without_folder = endswith(var.folder_path, ".open-next") ? replace(var.folder_path, "/.open-next", "") : var.folder_path
+  open_next_config              = local.open_next_versions.v2 == false && fileexists(local.open_next_output_path) ? jsondecode(file(local.open_next_output_path)) : { edgeFunctions = null, origins = null, behaviors = null, additionalProps = null }
+
+  open_next_default_server     = local.open_next_versions.v2 ? "${local.open_next_path_without_folder}/.open-next/server-function" : "${local.open_next_path_without_folder}/${lookup(local.origins, "default", { "bundle" = ".open-next/server-functions/default" }).bundle}"
+  open_next_image_optimisation = local.open_next_versions.v2 ? "${local.open_next_path_without_folder}/.open-next/image-optimization-function" : "${local.open_next_path_without_folder}/${lookup(local.origins, "imageOptimizer", { "bundle" = ".open-next/image-optimization-function" }).bundle}"
+  open_next_revalidation       = local.open_next_versions.v2 ? "${local.open_next_path_without_folder}/.open-next/revalidation-function" : "${local.open_next_path_without_folder}/${lookup(local.additional_props, "revalidationFunction", { "bundle" = ".open-next/revalidation-function" }).bundle}"
+  open_next_warmer             = local.open_next_versions.v2 ? "${local.open_next_path_without_folder}/.open-next/warmer-function" : "${local.open_next_path_without_folder}/${lookup(local.additional_props, "warmer", { "bundle" = ".open-next/warmer-function" }).bundle}"
+
+  edge_functions   = merge(lookup(local.open_next_config, "edgeFunctions", null), {})
+  origins          = merge(lookup(local.open_next_config, "origins", null), {})
+  additional_props = merge(lookup(local.open_next_config, "additionalProps", null), {})
+  behaviors        = lookup(local.open_next_config, "behaviors", null) != null ? local.open_next_config["behaviors"] : []
+
+  default_server_function     = local.origins != null ? lookup(local.origins, "default", {}) : {}
+  additional_server_functions = local.origins != null ? { for name, details in local.origins : name => details if contains(["s3", "imageOptimizer", "default"], name) == false } : {}
+
   create_distribution = var.distribution.deployment == "CREATE"
 
   staging_alias    = var.aliases != null ? var.aliases.staging : one(module.open_next_aliases[*].alias_details.staging)
@@ -27,49 +48,136 @@ locals {
     "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA"           = "AUTH_LAMBDA"
   }
 
-  server_function_auth             = lookup(local.auth_options, var.server_function.backend_deployment_type, null)
-  image_optimisation_function_auth = lookup(local.auth_options, var.image_optimisation_function.backend_deployment_type, null)
-  zone = {
-    aliases                          = local.aliases
-    server_domain_name               = lookup(module.server_function.url_hostnames, local.staging_alias, null)
-    server_function_arn              = local.server_at_edge ? module.server_function.qualified_arn : module.server_function.arn
-    server_function_auth             = local.server_function_auth
-    server_function_name             = module.server_function.name
-    server_function_streaming        = var.server_function.enable_streaming == true
-    server_at_edge                   = local.server_at_edge
-    image_optimisation_domain_name   = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].url_hostnames)[local.staging_alias] : null
-    image_optimisation_function_auth = local.image_optimisation_function_auth
-    image_optimisation_function_name = try(one(module.image_optimisation_function[*].name), null)
-    use_auth_lambda                  = var.server_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA"
-    bucket_domain_name               = local.website_bucket_domain_name
-    bucket_origin_path               = "/${module.s3_assets.origin_asset_path}"
-    reinvalidation_hash              = sha1(join("-", concat(module.s3_assets.file_hashes, [try(module.server_function.version, "")])))
-  }
-
   lambda_permissions = local.create_distribution ? merge([for distribution in try(one(module.public_resources[*].distributions_provisioned), []) : { for alias in local.aliases : "${distribution}-${alias}" => { distribution = distribution, alias = alias } }]...) : {}
 
-  user_supplied_behaviours = coalesce(var.behaviours, { custom_error_responses = null, static_assets = null, server = null, image_optimisation = null })
-  behaviours = merge(local.user_supplied_behaviours, {
+  zone_origins = merge({
+    static_assets = {
+      domain_name  = local.website_bucket_domain_name
+      backend_name = "website-bucket"
+      arn          = null
+      path         = "/${module.s3_assets.origin_asset_path}"
+      auth         = null
+      headers      = null
+    }
+    image_optimisation = {
+      domain_name  = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].url_hostnames)[local.staging_alias] : null
+      backend_name = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].name) : null
+      arn          = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].arn) : null
+      path         = null
+      auth         = lookup(local.auth_options, var.image_optimisation_function.backend_deployment_type, null)
+      headers      = null
+    }
+    },
+    local.server_at_edge ? {} : { server = {
+      domain_name  = lookup(module.server_function.url_hostnames, local.staging_alias, null)
+      backend_name = module.server_function.name
+      arn          = module.server_function.arn
+      path         = null
+      auth         = lookup(local.auth_options, var.server_function.backend_deployment_type, null)
+      headers      = null
+    } },
+    { for name, additional_server_function in local.additional_server_functions : name => {
+      domain_name  = lookup(module.additional_server_function[name].url_hostnames, local.staging_alias, null)
+      backend_name = module.additional_server_function[name].name
+      arn          = module.additional_server_function[name].arn
+      path         = null
+      auth         = lookup(local.auth_options, try(var.additional_server_functions.function_overrides[name].backend_deployment_type, var.additional_server_functions.backend_deployment_type), null)
+      headers      = null
+    } if try(var.additional_server_functions.function_overrides[name].backend_deployment_type, var.additional_server_functions.backend_deployment_type) != "EDGE_LAMBDA" }
+  )
+  zone = {
+    reinvalidation_hash = sha1(join("-", concat(module.s3_assets.file_hashes, [try(module.server_function.version, "")], [for edge_function in module.edge_function : edge_function.version], [for additional_server_function in module.additional_server_function : additional_server_function.version])))
+    origins             = local.zone_origins
+  }
+
+  user_supplied_behaviours = coalesce(var.behaviours, { custom_error_responses = null, static_assets = null, server = null, image_optimisation = null, additional_origins = {} })
+  zone_behaviours = merge(local.user_supplied_behaviours, {
     static_assets = merge(coalesce(local.user_supplied_behaviours.static_assets, { paths = null, additional_paths = null, path_overrides = null, allowed_methods = null, cached_methods = null, cache_policy_id = null, origin_request_policy_id = null, compress = null, viewer_protocol_policy = null, viewer_request = null, viewer_response = null, origin_request = null, origin_response = null }), {
+      paths            = try(coalesce(try(local.user_supplied_behaviours.static_assets.paths, null), local.open_next_versions.v2 ? null : [for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" if behavior.origin == "s3"]), null)
       additional_paths = try(coalesce(try(local.user_supplied_behaviours.static_assets.additional_paths, null), module.s3_assets.cloudfront_asset_mappings), [])
     })
+    server = merge(coalesce(local.user_supplied_behaviours.server, { paths = null, path_overrides = null, allowed_methods = null, cached_methods = null, cache_policy_id = null, origin_request_policy_id = null, compress = null, viewer_protocol_policy = null, viewer_request = null, viewer_response = null, origin_request = null, origin_response = null }), {
+      paths = try(coalesce(try(local.user_supplied_behaviours.server.paths, null), local.open_next_versions.v2 ? null : [for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" if behavior.origin == "default"]), null)
+      origin_request = local.server_at_edge ? {
+        arn          = module.server_function.qualified_arn
+        include_body = true
+      } : null
+      path_overrides = merge(try(local.user_supplied_behaviours.server.path_overrides, {}), { for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" => { origin_request = { arn = module.edge_function[behavior["edgeFunction"]].qualified_arn, include_body = true } } if behavior.origin == "default" && lookup(behavior, "edgeFunction", null) != null })
+    })
+    image_optimisation = merge(coalesce(local.user_supplied_behaviours.image_optimisation, { paths = null, path_overrides = null, allowed_methods = null, cached_methods = null, cache_policy_id = null, origin_request_policy_id = null, compress = null, viewer_protocol_policy = null, viewer_request = null, viewer_response = null, origin_request = null, origin_response = null }), {
+      paths = try(coalesce(try(local.user_supplied_behaviours.image_optimisation.paths, null), local.open_next_versions.v2 ? null : [for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" if behavior.origin == "imageOptimizer"]), null)
+    })
+    additional_origins = { for name, additional_server_function in local.additional_server_functions : name => merge(coalesce(local.user_supplied_behaviours.additional_origins, { paths = null, path_overrides = null, allowed_methods = null, cached_methods = null, cache_policy_id = null, origin_request_policy_id = null, compress = null, viewer_protocol_policy = null, viewer_request = null, viewer_response = null, origin_request = null, origin_response = null, origin_reference = null }), {
+      paths            = try(coalesce(try(local.user_supplied_behaviours.additional_origins[name].paths, null), local.open_next_versions.v2 ? null : [for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" if behavior.origin == name]), null)
+      origin_reference = coalesce(try(local.user_supplied_behaviours.additional_origins[name].origin_reference, null), name)
+      origin_request = try(coalesce(try(local.user_supplied_behaviours.additional_origins[name].origin_request, null), try(local.user_supplied_behaviours.additional_origins[name].backend_deployment_type, var.additional_server_functions.backend_deployment_type) == "EDGE_LAMBDA" ? {
+        arn          = module.additional_server_function[name].qualified_arn
+        include_body = true
+      } : null), null)
+      path_overrides = merge(try(local.user_supplied_behaviours.additional_origins[name].path_overrides, {}), { for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" => { origin_request = { arn = module.edge_function[behavior["edgeFunction"]].qualified_arn, include_body = true } } if behavior.origin == name && lookup(behavior, "edgeFunction", null) != null })
+    }) }
   })
 
   server_at_edge = var.server_function.backend_deployment_type == "EDGE_LAMBDA"
+
+  cache_bucket_env_variables = {
+    "CACHE_BUCKET_NAME" : local.website_bucket_name,
+    "CACHE_BUCKET_REGION" : local.website_bucket_region,
+    "CACHE_BUCKET_KEY_PREFIX" : module.s3_assets.cache_key_prefix
+  }
+  revalidation_queue_env_variables = {
+    "REVALIDATION_QUEUE_URL" : aws_sqs_queue.revalidation_queue.url,
+    "REVALIDATION_QUEUE_REGION" : data.aws_region.current.name,
+  }
+  tag_mapping_env_variables = local.isr_tag_mapping_db_name != null ? { "CACHE_DYNAMO_TABLE" : local.isr_tag_mapping_db_name } : {}
   server_function_env_variables = merge(
-    {
-      "CACHE_BUCKET_NAME" : local.website_bucket_name,
-      "CACHE_BUCKET_REGION" : local.website_bucket_region,
-      "CACHE_BUCKET_KEY_PREFIX" : module.s3_assets.cache_key_prefix,
-      "REVALIDATION_QUEUE_URL" : aws_sqs_queue.revalidation_queue.url,
-      "REVALIDATION_QUEUE_REGION" : data.aws_region.current.name,
-    },
-    local.isr_tag_mapping_db_name != null ? { "CACHE_DYNAMO_TABLE" : local.isr_tag_mapping_db_name } : {},
+    local.cache_bucket_env_variables,
+    local.revalidation_queue_env_variables,
+    local.tag_mapping_env_variables,
     var.server_function.additional_environment_variables
   )
 
+  cache_bucket_iam_policies = [{
+    "Action" : [
+      "s3:GetObject*",
+      "s3:GetBucket*",
+      "s3:List*",
+      "s3:DeleteObject*",
+      "s3:PutObject",
+      "s3:PutObjectLegalHold",
+      "s3:PutObjectRetention",
+      "s3:PutObjectTagging",
+      "s3:PutObjectVersionTagging",
+      "s3:Abort*"
+    ],
+    "Resource" : [
+      local.website_bucket_arn,
+      "${local.website_bucket_arn}/*"
+    ],
+    "Effect" : "Allow"
+  }]
+
+  revalidation_queue_iam_policies = [{
+    "Action" : [
+      "sqs:SendMessage"
+    ],
+    "Resource" : aws_sqs_queue.revalidation_queue.arn,
+    "Effect" : "Allow"
+  }]
+  tag_mapping_iam_policies = [{
+    "Action" : [
+      "dynamodb:GetItem",
+      "dynamodb:Query"
+    ],
+    "Resource" : [
+      local.isr_tag_mapping_db_arn,
+      "${local.isr_tag_mapping_db_arn}/index/*"
+    ],
+    "Effect" : "Allow"
+  }]
+
   custom_error_responses = [for custom_error_response in var.custom_error_responses : {
-    bucket_domain_name    = local.zone.bucket_domain_name
+    bucket_domain_name    = local.zone_origins["static_assets"].domain_name
     error_code            = custom_error_response.error_code
     error_caching_min_ttl = custom_error_response.error_caching_min_ttl
     response_code         = custom_error_response.response_code
@@ -103,7 +211,7 @@ module "public_resources" {
   lambda_url_oac            = var.distribution.lambda_url_oac
   cache_policy              = var.distribution.cache_policy
 
-  behaviours            = local.behaviours
+  behaviours            = local.zone_behaviours
   waf                   = var.waf
   domain_config         = var.domain_config
   continuous_deployment = var.continuous_deployment
@@ -200,14 +308,59 @@ module "s3_assets" {
   scripts = var.scripts
 }
 
-# Server Function
+# Edge Functions
+
+# As lambda@edge does not support environment variables, the module will injected them at the top of the server code prior to the code being uploaded to AWS, credit to SST for the inspiration behind this. https://github.com/sst/sst/blob/3b792053d90c49d9ca693308646a3389babe9ceb/packages/sst/src/constructs/EdgeFunction.ts#L193
+resource "local_file" "edge_functions_modifications" {
+  for_each = { for name, edge_function in local.edge_functions : name => edge_function if try(var.edge_functions.function_overrides[name].function_code.zip, null) == null && try(var.edge_functions.function_overrides[name].function_code.s3, null) == null }
+
+  content  = "process.env = { ...process.env, ...${jsonencode(try(coalesce(try(var.edge_functions.function_overrides[each.key].additional_environment_variables, null), var.edge_functions.additional_environment_variables), {}))} };\r\n${file("${local.open_next_path_without_folder}/${each.value.bundle}/handler.mjs")}"
+  filename = "${local.open_next_path_without_folder}/${each.value.bundle}/handler.mjs"
+}
+
+module "edge_function" {
+  for_each = local.edge_functions
+  source   = "../tf-aws-lambda"
+
+  function_name = each.key
+  function_code = {
+    zip = try(var.edge_functions.function_overrides[each.key].function_code.s3, null) == null ? coalesce(try(var.edge_functions.function_overrides[each.key].function_code.zip, null), {
+      path = data.archive_file.edge_function[each.key].output_path
+      hash = data.archive_file.edge_function[each.key].output_base64sha256
+    }) : null
+    s3 = try(var.edge_functions.function_overrides[each.key].function_code.s3, null)
+  }
+
+  run_at_edge = true
+  runtime     = try(coalesce(try(var.edge_functions.function_overrides[each.key].runtime, null), try(var.edge_functions.runtime, null)), null)
+  handler     = try(coalesce(try(var.edge_functions.function_overrides[each.key].handler, null), try(var.edge_functions.handler, null)), "handler.handler")
+
+  memory_size = try(coalesce(try(var.edge_functions.function_overrides[each.key].memory_size, null), try(var.edge_functions.memory_size, null)), null)
+  timeout     = try(coalesce(try(var.edge_functions.function_overrides[each.key].timeout, null), try(var.edge_functions.timeout, null)), null)
+
+  additional_iam_policies = try(coalesce(try(var.edge_functions.function_overrides[each.key].additional_iam_policies, null), try(var.edge_functions.additional_iam_policies, null)), [])
+  iam                     = try(coalesce(try(var.edge_functions.function_overrides[each.key].iam, null), try(var.edge_functions.iam, null), var.iam), null)
+
+  prefix = var.prefix
+  suffix = var.suffix
+
+  scripts  = var.scripts
+  timeouts = try(coalesce(try(var.edge_functions.function_overrides[each.key].timeouts, null), try(var.edge_functions.timeouts, null), null), null)
+
+  providers = {
+    aws     = aws.global
+    aws.iam = aws.iam
+  }
+}
+
+# Default Server Function
 
 # As lambda@edge does not support environment variables, the module will injected them at the top of the server code prior to the code being uploaded to AWS, credit to SST for the inspiration behind this. https://github.com/sst/sst/blob/3b792053d90c49d9ca693308646a3389babe9ceb/packages/sst/src/constructs/EdgeFunction.ts#L193
 resource "local_file" "lambda_at_edge_modifications" {
   count = local.server_at_edge && try(var.server_function.function_code.zip, null) == null && try(var.server_function.function_code.s3, null) == null ? 1 : 0
 
-  content  = "process.env = { ...process.env, ...${jsonencode(local.server_function_env_variables)} };\r\n${file("${var.folder_path}/server-function/index.mjs")}"
-  filename = "${var.folder_path}/server-function/index.mjs"
+  content  = "process.env = { ...process.env, ...${jsonencode(local.server_function_env_variables)} };\r\n${file("${local.open_next_default_server}/index.mjs")}"
+  filename = "${local.open_next_default_server}/index.mjs"
 }
 
 module "server_function" {
@@ -229,61 +382,15 @@ module "server_function" {
   timeout     = var.server_function.timeout
 
   additional_iam_policies = var.server_function.additional_iam_policies
-  iam_policy_statements = [
-    {
-      "Action" : [
-        "s3:GetObject*",
-        "s3:GetBucket*",
-        "s3:List*",
-        "s3:DeleteObject*",
-        "s3:PutObject",
-        "s3:PutObjectLegalHold",
-        "s3:PutObjectRetention",
-        "s3:PutObjectTagging",
-        "s3:PutObjectVersionTagging",
-        "s3:Abort*"
-      ],
-      "Resource" : [
-        local.website_bucket_arn,
-        "${local.website_bucket_arn}/*"
-      ],
-      "Effect" : "Allow"
-    },
-    {
-      "Action" : [
-        "sqs:SendMessage",
-        "sqs:GetQueueAttributes",
-        "sqs:GetQueueUrl",
-      ],
-      "Resource" : aws_sqs_queue.revalidation_queue.arn,
-      "Effect" : "Allow"
-    },
-    {
-      "Action" : [
-        "dynamodb:BatchGetItem",
-        "dynamodb:GetRecords",
-        "dynamodb:GetShardIterator",
-        "dynamodb:Query",
-        "dynamodb:GetItem",
-        "dynamodb:Scan",
-        "dynamodb:ConditionCheckItem",
-        "dynamodb:BatchWriteItem",
-        "dynamodb:PutItem",
-        "dynamodb:UpdateItem",
-        "dynamodb:DeleteItem",
-        "dynamodb:DescribeTable",
-      ],
-      "Resource" : [
-        local.isr_tag_mapping_db_arn,
-        "${local.isr_tag_mapping_db_arn}/index/*"
-      ],
-      "Effect" : "Allow"
-    }
-  ]
+  iam_policy_statements = concat(
+    local.cache_bucket_iam_policies,
+    local.revalidation_queue_iam_policies,
+    local.tag_mapping_iam_policies
+  )
 
   environment_variables = local.server_at_edge ? {} : local.server_function_env_variables
 
-  architecture   = try(coalesce(var.server_function.function_architecture, var.function_architecture), null)
+  architecture   = try(coalesce(var.server_function.function_architecture, var.function_architecture), "x86_64")
   cloudwatch_log = try(coalesce(var.server_function.cloudwatch_log, var.cloudwatch_log), null)
   iam            = try(coalesce(var.server_function.iam, var.iam), null)
   vpc            = try(coalesce(var.server_function.vpc, var.vpc), null)
@@ -301,12 +408,13 @@ module "server_function" {
 
   function_url = {
     create              = local.server_at_edge == false
-    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], local.server_function_auth), false) ? "AWS_IAM" : "NONE"
+    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], lookup(local.auth_options, var.server_function.backend_deployment_type, null)), false) ? "AWS_IAM" : "NONE"
     allow_any_principal = var.server_function.backend_deployment_type != "REGIONAL_LAMBDA_WITH_OAC"
-    enable_streaming    = var.server_function.enable_streaming
+    enable_streaming    = coalesce(var.server_function.enable_streaming, lookup(local.default_server_function, "streaming", false))
   }
 
-  scripts = var.scripts
+  scripts  = var.scripts
+  timeouts = var.server_function.timeouts
 
   providers = {
     aws     = aws.server_function
@@ -314,12 +422,100 @@ module "server_function" {
   }
 }
 
-# Moved to the single-zone to prevent a cyclic dependency
 resource "aws_lambda_permission" "server_function_url_permission" {
-  for_each = local.zone.server_function_auth == "OAC" ? local.lambda_permissions : {}
+  for_each = try(local.zone_origins["server"].auth, null) == "OAC" ? local.lambda_permissions : {}
 
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = module.server_function.name
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
+  qualifier              = each.value.alias
+  function_url_auth_type = "AWS_IAM"
+}
+
+# As lambda@edge does not support environment variables, the module will injected them at the top of the server code prior to the code being uploaded to AWS, credit to SST for the inspiration behind this. https://github.com/sst/sst/blob/3b792053d90c49d9ca693308646a3389babe9ceb/packages/sst/src/constructs/EdgeFunction.ts#L193
+resource "local_file" "additional_server_function_modifications" {
+  for_each = { for name, additional_server_function in local.additional_server_functions : name => additional_server_function if try(var.additional_server_functions.function_overrides[name].function_code.zip, null) == null && try(var.additional_server_functions.function_overrides[name].function_code.s3, null) == null && try(var.additional_server_functions.function_overrides[name].backend_deployment_type, var.additional_server_functions.backend_deployment_type) == "EDGE_LAMBDA" }
+
+  content  = "process.env = { ...process.env, ...${jsonencode(local.server_function_env_variables)} };\r\n${file("${local.open_next_default_server}/index.mjs")}"
+  filename = "${local.open_next_default_server}/index.mjs"
+}
+
+module "additional_server_function" {
+  for_each = local.additional_server_functions
+  source   = "../tf-aws-lambda"
+
+  function_name = each.key
+
+  function_code = {
+    zip = try(var.additional_server_functions.function_overrides[each.key].function_code.s3, null) == null ? coalesce(try(var.additional_server_functions.function_overrides[each.key].function_code.zip, null), {
+      path = data.archive_file.additional_server_function[each.key].output_path
+      hash = data.archive_file.additional_server_function[each.key].output_base64sha256
+    }) : null
+    s3 = try(var.additional_server_functions.function_overrides[each.key].function_code.s3, null)
+  }
+
+  runtime = try(var.additional_server_functions.function_overrides[each.key].runtime, var.additional_server_functions.runtime)
+  handler = try(coalesce(try(var.additional_server_functions.function_overrides[each.key].handler, null), try(var.additional_server_functions.handler, null)), "index.handler")
+
+  memory_size = try(var.additional_server_functions.function_overrides[each.key].memory_size, var.additional_server_functions.memory_size)
+  timeout     = try(var.additional_server_functions.function_overrides[each.key].timeout, var.additional_server_functions.timeout)
+
+  additional_iam_policies = try(coalesce(try(var.additional_server_functions.function_overrides[each.key].additional_iam_policies, null), try(var.additional_server_functions.additional_iam_policies, null)), [])
+  iam_policy_statements = concat(
+    try(coalesce(try(var.additional_server_functions.function_overrides[each.key].iam_policies.include_bucket_access, null), try(var.additional_server_functions.iam_policies.include_bucket_access, null)), false) == true ? local.cache_bucket_iam_policies : [],
+    try(coalesce(try(var.additional_server_functions.function_overrides[each.key].iam_policies.include_revalidation_queue_access, null), try(var.additional_server_functions.iam_policies.include_revalidation_queue_access, null)), false) == true ? local.revalidation_queue_iam_policies : [],
+    try(coalesce(try(var.additional_server_functions.function_overrides[each.key].iam_policies.include_tag_mapping_db_access, null), try(var.additional_server_functions.iam_policies.include_tag_mapping_db_access, null)), false) == true ? local.tag_mapping_iam_policies : []
+  )
+
+  environment_variables = try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type) == "EDGE_LAMBDA" ? {} : merge(
+    try(coalesce(try(var.additional_server_functions.function_overrides[each.key].iam_policies.include_bucket_access, null), try(var.additional_server_functions.iam_policies.include_bucket_access, null)), false) == true ? local.cache_bucket_env_variables : {},
+    try(coalesce(try(var.additional_server_functions.function_overrides[each.key].iam_policies.include_revalidation_queue_access, null), try(var.additional_server_functions.iam_policies.include_revalidation_queue_access, null)), false) == true ? local.revalidation_queue_env_variables : {},
+    try(coalesce(try(var.additional_server_functions.function_overrides[each.key].iam_policies.include_tag_mapping_db_access, null), try(var.additional_server_functions.iam_policies.include_tag_mapping_db_access, null)), false) == true ? local.tag_mapping_env_variables : {},
+    try(coalesce(try(var.additional_server_functions.function_overrides[each.key].iam_policies.additional_environment_variables, null), try(var.additional_server_functions.iam_policies.additional_environment_variables, null)), {})
+  )
+
+  architecture   = coalesce(try(var.additional_server_functions.function_overrides[each.key].function_architecture, var.additional_server_functions.function_architecture), "x86_64")
+  cloudwatch_log = try(var.additional_server_functions.function_overrides[each.key].cloudwatch_log, var.additional_server_functions.cloudwatch_log)
+  iam            = try(var.additional_server_functions.function_overrides[each.key].iam, var.additional_server_functions.iam)
+  vpc            = try(var.additional_server_functions.function_overrides[each.key].vpc, var.additional_server_functions.vpc)
+
+  prefix = var.prefix
+  suffix = var.suffix
+
+  aliases = {
+    create          = true
+    names           = local.aliases
+    alias_to_update = local.staging_alias
+  }
+
+  run_at_edge = try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type) == "EDGE_LAMBDA"
+
+  function_url = {
+    create              = try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type) != "EDGE_LAMBDA"
+    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], lookup(local.auth_options, try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type), null)), false) ? "AWS_IAM" : "NONE"
+    allow_any_principal = try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type) != "REGIONAL_LAMBDA_WITH_OAC"
+    enable_streaming    = coalesce(try(var.additional_server_functions.function_overrides[each.key].enable_streaming, var.additional_server_functions.enable_streaming, null), try(each.value.streaming, null), false)
+  }
+
+  scripts  = var.scripts
+  timeouts = try(var.additional_server_functions.function_overrides[each.key].timeouts, var.additional_server_functions.timeouts)
+
+  providers = {
+    aws     = aws.server_function
+    aws.iam = aws.iam
+  }
+}
+
+resource "aws_lambda_permission" "additional_server_function_url_permission" {
+  for_each = merge([
+    for key, additional_server_function in local.additional_server_functions : {
+      for lambda_permission_key, lambda_permissions in local.lambda_permissions : "${key}-${lambda_permission_key}" => merge({ name = key }, additional_server_function, lambda_permissions)
+    } if try(var.additional_server_functions.function_overrides[key].backend_deployment_type, var.additional_server_functions.backend_deployment_type) != "REGIONAL_LAMBDA_WITH_OAC"
+  ]...)
+
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = module.server_function[each.value.name].name
   principal              = "cloudfront.amazonaws.com"
   source_arn             = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
   qualifier              = each.value.alias
@@ -347,9 +543,20 @@ module "warmer_function" {
   memory_size = var.warmer_function.memory_size
   timeout     = var.warmer_function.timeout
 
-  environment_variables = merge({
+  environment_variables = merge(local.open_next_versions.v2 ? {
     "FUNCTION_NAME" : "${module.server_function.name}:${each.value}",
     "CONCURRENCY" : each.value == local.production_alias ? var.warmer_function.concurrency : coalesce(try(var.warmer_function.warm_staging.concurrency, null), var.warmer_function.concurrency)
+    } : {
+    "WARM_PARAMS" : jsonencode(concat([{
+      function    = "${module.server_function.name}:${each.value}",
+      concurrency = each.value == local.production_alias ? var.warmer_function.concurrency : coalesce(try(var.warmer_function.warm_staging.concurrency, null), var.warmer_function.concurrency)
+      }], [
+      for additional_function in module.additional_server_function : {
+        function    = "${additional_function.name}:${each.value}",
+        concurrency = each.value == local.production_alias ? var.warmer_function.concurrency : coalesce(try(var.warmer_function.warm_staging.concurrency, null), var.warmer_function.concurrency)
+      }
+      ]
+    ))
   }, var.warmer_function.additional_environment_variables)
 
   additional_iam_policies = var.warmer_function.additional_iam_policies
@@ -358,7 +565,10 @@ module "warmer_function" {
       "Action" : [
         "lambda:InvokeFunction"
       ],
-      "Resource" : "${module.server_function.arn}:${each.value}",
+      "Resource" : concat(
+        ["${module.server_function.arn}:${each.value}"],
+        [for additional_function in module.additional_server_function : "${additional_function.arn}:${each.value}"]
+      )
       "Effect" : "Allow"
     }
   ]
@@ -432,7 +642,7 @@ module "image_optimisation_function" {
 
   function_url = {
     create              = true
-    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], local.image_optimisation_function_auth), false) ? "AWS_IAM" : "NONE"
+    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], lookup(local.auth_options, var.image_optimisation_function.backend_deployment_type, null)), false) ? "AWS_IAM" : "NONE"
     allow_any_principal = var.image_optimisation_function.backend_deployment_type != "REGIONAL_LAMBDA_WITH_OAC"
   }
 
@@ -452,7 +662,7 @@ module "image_optimisation_function" {
 }
 
 resource "aws_lambda_permission" "image_optimisation_function_url_permission" {
-  for_each = var.image_optimisation_function.create && local.image_optimisation_function_auth == "OAC" ? local.lambda_permissions : {}
+  for_each = var.image_optimisation_function.create && lookup(local.auth_options, var.image_optimisation_function.backend_deployment_type, null) == "OAC" ? local.lambda_permissions : {}
 
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = one(module.image_optimisation_function[*].name)

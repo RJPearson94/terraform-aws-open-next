@@ -81,9 +81,6 @@ variable "auth_function" {
       path                 = optional(string)
       permissions_boundary = optional(string)
     }))
-    cloudwatch_log = optional(object({
-      retention_in_days = number
-    }))
     timeouts = optional(object({
       create = optional(string)
       update = optional(string)
@@ -117,10 +114,9 @@ variable "lambda_url_oac" {
 }
 
 variable "cache_policy" {
-  description = "Configuration for the CloudFront cache policy. NOTE: please use ID as ARN is deprecated"
+  description = "Configuration for the CloudFront cache policy"
   type = object({
     deployment            = optional(string, "CREATE")
-    arn                   = optional(string)
     id                    = optional(string)
     default_ttl           = optional(number, 0)
     max_ttl               = optional(number, 31536000)
@@ -138,28 +134,25 @@ variable "cache_policy" {
   }
 
   validation {
-    condition     = anytrue([var.cache_policy.deployment == "CREATE", (var.cache_policy.deployment == "USE_EXISTING" && (var.cache_policy.arn != null || var.cache_policy.id != null))])
-    error_message = "The cache policy ID or ARN must be set when the deployment is set to USE_EXISTING. NOTE: please use ID as ARN is deprecated"
+    condition     = anytrue([var.cache_policy.deployment == "CREATE", (var.cache_policy.deployment == "USE_EXISTING" && var.cache_policy.id != null)])
+    error_message = "The cache policy ID or ARN must be set when the deployment is set to USE_EXISTING"
   }
 }
 
 variable "zones" {
-  description = "Configuration for the website zones to assoicate with the distribution. NOTE: please use server_function_auth and image_optimisation_function_auth as use_auth_lambda is deprecated"
+  description = "Configuration for the website zones to assoicate with the distribution"
   type = list(object({
-    root                             = bool
-    name                             = string
-    server_domain_name               = string
-    server_function_arn              = string
-    server_at_edge                   = bool
-    bucket_domain_name               = string
-    bucket_origin_path               = string
-    reinvalidation_hash              = string
-    use_auth_lambda                  = bool
-    image_optimisation_domain_name   = optional(string)
-    image_optimisation_function_auth = optional(string)
-    path                             = optional(string)
-    server_function_auth             = optional(string)
-    server_origin_headers            = optional(map(string))
+    root                = bool
+    name                = string
+    reinvalidation_hash = string
+    origins = map(object({
+      domain_name = string
+      path        = optional(string)
+      arn         = optional(string)
+      auth        = optional(string)
+      headers     = optional(map(string))
+    }))
+    path = optional(string)
   }))
 
   validation {
@@ -173,17 +166,12 @@ variable "zones" {
   }
 
   validation {
-    condition = alltrue([
-      for zone in var.zones : contains(["OAC", "AUTH_LAMBDA"], zone.server_function_auth) if zone.server_function_auth != null
-    ])
-    error_message = "All server function auth should be either null, OAC or AUTH_LAMBDA"
-  }
-
-  validation {
-    condition = alltrue([
-      for zone in var.zones : contains(["OAC", "AUTH_LAMBDA"], zone.image_optimisation_function_auth) if zone.image_optimisation_function_auth != null 
-    ])
-    error_message = "All image optimisation function auth should be either null, OAC or AUTH_LAMBDA"
+    condition = alltrue(flatten([
+      for zone in var.zones : [
+        for origin in zone.origins : contains(["OAC", "AUTH_LAMBDA"], origin.auth) if origin.auth != null
+      ]
+    ]))
+    error_message = "All origin auth should be either null, OAC or AUTH_LAMBDA"
   }
 }
 
@@ -231,7 +219,6 @@ variable "behaviours" {
         arn  = string
       }))
       origin_request = optional(object({
-        type         = string
         arn          = string
         include_body = optional(bool)
       }))
@@ -287,7 +274,6 @@ variable "behaviours" {
         arn  = string
       }))
       origin_request = optional(object({
-        type         = string
         arn          = string
         include_body = optional(bool)
       }))
@@ -341,7 +327,6 @@ variable "behaviours" {
         arn  = string
       }))
       origin_request = optional(object({
-        type         = string
         arn          = string
         include_body = optional(bool)
       }))
@@ -350,6 +335,59 @@ variable "behaviours" {
         arn  = string
       }))
     }))
+    additional_origins = optional(map(object({
+      zone_overrides = optional(map(object({
+        paths = optional(list(string))
+      })))
+      paths = optional(list(string))
+      path_overrides = optional(map(object({
+        allowed_methods          = optional(list(string))
+        cached_methods           = optional(list(string))
+        cache_policy_id          = optional(string)
+        origin_request_policy_id = optional(string)
+        compress                 = optional(bool)
+        viewer_protocol_policy   = optional(string)
+        viewer_request = optional(object({
+          type         = string
+          arn          = string
+          include_body = optional(bool)
+        }))
+        viewer_response = optional(object({
+          type = string
+          arn  = string
+        }))
+        origin_request = optional(object({
+          arn          = string
+          include_body = bool
+        }))
+        origin_response = optional(object({
+          arn = string
+        }))
+      })))
+      allowed_methods          = optional(list(string))
+      cached_methods           = optional(list(string))
+      cache_policy_id          = optional(string)
+      origin_request_policy_id = optional(string)
+      compress                 = optional(bool)
+      viewer_protocol_policy   = optional(string)
+      viewer_request = optional(object({
+        type         = string
+        arn          = string
+        include_body = optional(bool)
+      }))
+      viewer_response = optional(object({
+        type = string
+        arn  = string
+      }))
+      origin_request = optional(object({
+        arn          = string
+        include_body = optional(bool)
+      }))
+      origin_response = optional(object({
+        type = string
+        arn  = string
+      }))
+    })))
     image_optimisation = optional(object({
       zone_overrides = optional(map(object({
         paths = optional(list(string))
@@ -395,7 +433,6 @@ variable "behaviours" {
         arn  = string
       }))
       origin_request = optional(object({
-        type         = string
         arn          = string
         include_body = optional(bool)
       }))
