@@ -6,17 +6,17 @@ This module supports three deployment options:
 
 Independent Zones
 
-![Multi Zone - Independent Zones](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.0/docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
+![Multi Zone - Independent Zones](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.1/docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
 
 _Note:_ If you use tools like Terragrunt or CDKTF, you can use the Single Zone module to deploy each zone into its own terraform state
 
 Shared Distribution
 
-![Multi Zone - Shared Distribution](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.0/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
+![Multi Zone - Shared Distribution](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.1/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
 
 Shared Distribution and Bucket
 
-![Multi Zone - Shared Distribution and Bucket](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.0/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
+![Multi Zone - Shared Distribution and Bucket](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.1/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
 
 The following are optional:
 
