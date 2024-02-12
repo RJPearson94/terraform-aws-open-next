@@ -521,7 +521,7 @@ resource "terraform_data" "isr_table_item" {
 
     environment = merge({
       "TABLE_NAME" = local.isr_tag_mapping_db_name
-      "ITEM"       = jsonencode(merge(each.value, { alias = local.staging_alias }))
+      "ITEM"       = jsonencode(merge({ for name, value in each.value : name => value if name != "tf_key" }, { alias = { "S" = local.staging_alias } }))
     }, try(var.scripts.additional_environment_variables, {}), try(var.scripts.save_item_to_dynamo_script.additional_environment_variables, {}))
   }
 }
