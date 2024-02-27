@@ -76,7 +76,7 @@ Below are diagrams of the possible architecture combinations that can configured
 
 ### Single Zone
 
-![Single Zone Complete](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.1/docs/diagrams/Single%20Zone.png)
+![Single Zone Complete](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.2/docs/diagrams/Single%20Zone.png)
 
 #### Terraform
 
@@ -108,7 +108,7 @@ inputs = {
 
 ### Multi-Zone - Independent Zones
 
-![Multi Zone - Independent Zones](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.1/docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
+![Multi Zone - Independent Zones](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.2/docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
 
 #### Terraform
 
@@ -162,7 +162,7 @@ _Note:_ If you use tools like Terragrunt or CDKTF, you can use the Single Zone m
 
 ### Multi-Zone - Shared Distribution
 
-![Multi Zone - Shared Distribution](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.1/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
+![Multi Zone - Shared Distribution](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.2/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
 
 #### Terraform
 
@@ -214,7 +214,7 @@ inputs = {
 
 ### Multi-Zone - Shared Distribution and Bucket
 
-![Multi Zone - Shared Distribution and Bucket](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.1/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
+![Multi Zone - Shared Distribution and Bucket](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.2/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
 
 #### Terraform
 
