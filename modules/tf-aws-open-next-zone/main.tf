@@ -234,15 +234,27 @@ module "server_function" {
     },
     {
       "Action" : [
-        "sqs:SendMessage"
+        "sqs:SendMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl",
       ],
       "Resource" : aws_sqs_queue.revalidation_queue.arn,
       "Effect" : "Allow"
     },
     {
       "Action" : [
+        "dynamodb:BatchGetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:Query",
         "dynamodb:GetItem",
-        "dynamodb:Query"
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable",
       ],
       "Resource" : [
         local.isr_tag_mapping_db_arn,
