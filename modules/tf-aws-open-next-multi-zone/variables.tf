@@ -724,13 +724,15 @@ variable "domain_config" {
   description = "Configuration for CloudFront distribution domain. When the deployment is set to 'INDEPENDENT_ZONES' this can be overridden for each zone. If deployment is 'SHARED_DISTRIBUTION' or 'SHARED_DISTRIBUTION_AND_BUCKET' this configuration is used"
   type = object({
     evaluate_target_health = optional(bool, true)
+    include_www            = optional(bool, false)
     sub_domain             = optional(string)
     hosted_zones = list(object({
       name         = string
       id           = optional(string)
       private_zone = optional(bool, false)
     }))
-    create_route53_entries = optional(bool, true)
+    create_route53_entries         = optional(bool, true)
+    route53_record_allow_overwrite = optional(bool, true)
     viewer_certificate = optional(object({
       acm_certificate_arn      = string
       ssl_support_method       = optional(string, "sni-only")
@@ -1393,13 +1395,15 @@ variable "zones" {
     }))
     domain_config = optional(object({
       evaluate_target_health = optional(bool, true)
+      include_www            = optional(bool, false)
       sub_domain             = optional(string)
       hosted_zones = list(object({
         name         = string
         id           = optional(string)
         private_zone = optional(bool, false)
       }))
-      create_route53_entries = optional(bool, true)
+      create_route53_entries         = optional(bool, true)
+      route53_record_allow_overwrite = optional(bool, true)
       viewer_certificate = optional(object({
         acm_certificate_arn      = string
         ssl_support_method       = optional(string, "sni-only")

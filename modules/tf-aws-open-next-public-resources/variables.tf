@@ -557,13 +557,15 @@ variable "domain_config" {
   description = "Configuration for CloudFront distribution domain"
   type = object({
     evaluate_target_health = optional(bool, true)
+    include_www            = optional(bool, false)
     sub_domain             = optional(string)
     hosted_zones = list(object({
       name         = string
       id           = optional(string)
       private_zone = optional(bool, false)
     }))
-    create_route53_entries = optional(bool, true)
+    create_route53_entries         = optional(bool, true)
+    route53_record_allow_overwrite = optional(bool, true)
     viewer_certificate = optional(object({
       acm_certificate_arn      = string
       ssl_support_method       = optional(string, "sni-only")

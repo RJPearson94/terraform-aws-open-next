@@ -264,6 +264,10 @@ inputs = {
 }
 ```
 
+## Custom Domains
+
+For infomation on managing custom domains see the [domain-config documentation](https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.3.0/docs/domain-config.md)
+
 ## Examples
 
 The examples have been moved to a separate repository to reduce the amount of code that Terraform downloads. You can find them at [RJPearson94/terraform-aws-open-next-examples repo](https://github.com/RJPearson94/terraform-aws-open-next-examples)

@@ -7,7 +7,7 @@ locals {
   server_function_origin             = "server-function-origin"
 
   create_cache_policy = try(var.cache_policy.deployment, "CREATE") == "CREATE"
-  cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : try(coalesce(var.cache_policy.id, var.cache_policy.arn), null) 
+  cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : try(coalesce(var.cache_policy.id, var.cache_policy.arn), null)
 
   should_create_auth_lambda = contains(["DETACH", "CREATE"], var.auth_function.deployment) || (var.auth_function.deployment != "USE_EXISTING" && length({ for zone in local.zones : "distribution" => zone if try(zone.use_auth_lambda, false) == true }) > 0)
   auth_lambda_qualified_arn = var.auth_function.deployment == "USE_EXISTING" ? var.auth_function.qualified_arn : local.should_create_auth_lambda ? one(module.auth_function[*].qualified_arn) : null
@@ -305,11 +305,14 @@ locals {
     } if additional_rule.enabled] : []
   )
 
-  aliases = var.domain_config != null ? formatlist(join(".", compact([var.domain_config.sub_domain, "%s"])), distinct([for hosted_zone in var.domain_config.hosted_zones : hosted_zone.name])) : []
-  route53_entries = try(var.domain_config.create_route53_entries, false) == true ? { for hosted_zone in var.domain_config.hosted_zones : join("-", compact([hosted_zone.name, hosted_zone.id, hosted_zone.private_zone])) => {
-    name    = join(".", compact([var.domain_config.sub_domain, hosted_zone.name]))
-    zone_id = coalesce(hosted_zone.id, data.aws_route53_zone.hosted_zone[join("-", compact([hosted_zone.name, hosted_zone.private_zone]))].zone_id)
+  temp_aliases = var.domain_config != null ? concat(formatlist(join(".", compact([var.domain_config.sub_domain, "%s"])), distinct([for hosted_zone in var.domain_config.hosted_zones : hosted_zone.name]))) : []
+  aliases      = try(var.domain_config.include_www, false) == true ? flatten([for alias in local.temp_aliases : [alias, "www.${alias}"]]...) : local.temp_aliases
+  temp_route53_entries = try(var.domain_config.create_route53_entries, false) == true ? { for hosted_zone in var.domain_config.hosted_zones : join("-", compact([hosted_zone.name, hosted_zone.id, hosted_zone.private_zone])) => {
+    name            = join(".", compact([var.domain_config.sub_domain, hosted_zone.name]))
+    zone_id         = coalesce(hosted_zone.id, data.aws_route53_zone.hosted_zone[join("-", compact([hosted_zone.name, hosted_zone.private_zone]))].zone_id)
+    allow_overwrite = var.domain_config.route53_record_allow_overwrite
   } } : {}
+  route53_entries = try(var.domain_config.include_www, false) == true ? merge([for name, route53_details in local.temp_route53_entries : { "${name}" = route53_details, "www_${name}" = { name = "www.${route53_details.name}", zone_id = route53_details.zone_id, allow_overwrite = route53_details.allow_overwrite } }]...) : local.temp_route53_entries
 }
 
 # Functions
@@ -1338,9 +1341,10 @@ resource "aws_wafv2_ip_set" "ip_set" {
 resource "aws_route53_record" "route53_a_record" {
   for_each = local.route53_entries
 
-  zone_id = each.value.zone_id
-  name    = each.value.name
-  type    = "A"
+  allow_overwrite = each.value.allow_overwrite
+  zone_id         = each.value.zone_id
+  name            = each.value.name
+  type            = "A"
 
   alias {
     name                   = var.continuous_deployment.use ? one(aws_cloudfront_distribution.production_distribution[*].domain_name) : one(aws_cloudfront_distribution.website_distribution[*].domain_name)
@@ -1354,9 +1358,10 @@ resource "aws_route53_record" "route53_a_record" {
 resource "aws_route53_record" "route53_aaaa_record" {
   for_each = var.ipv6_enabled == true ? local.route53_entries : {}
 
-  zone_id = each.value.zone_id
-  name    = each.value.name
-  type    = "AAAA"
+  allow_overwrite = each.value.allow_overwrite
+  zone_id         = each.value.zone_id
+  name            = each.value.name
+  type            = "AAAA"
 
   alias {
     name                   = var.continuous_deployment.use ? one(aws_cloudfront_distribution.production_distribution[*].domain_name) : one(aws_cloudfront_distribution.website_distribution[*].domain_name)
