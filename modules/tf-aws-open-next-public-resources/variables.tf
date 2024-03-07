@@ -133,18 +133,15 @@ variable "cache_policy" {
 variable "zones" {
   description = "Configuration for the website zones to assoicate with the distribution"
   type = list(object({
-    root                           = bool
-    name                           = string
-    server_domain_name             = string
-    server_function_arn            = string
-    bucket_domain_name             = string
-    bucket_origin_path             = string
-    reinvalidation_hash            = string
-    server_at_edge                 = bool
-    use_auth_lambda                = bool
-    image_optimisation_domain_name = optional(string)
-    path                           = optional(string)
-    server_origin_headers          = optional(map(string))
+    root                = bool
+    name                = string
+    reinvalidation_hash = string
+    origins = map(object({
+      domain_name     = string
+      path            = optional(string)
+      use_auth_lambda = optional(bool)
+    }))
+    path = optional(string)
   }))
 
   validation {
@@ -202,7 +199,6 @@ variable "behaviours" {
         arn  = string
       }))
       origin_request = optional(object({
-        type         = string
         arn          = string
         include_body = optional(bool)
       }))
@@ -258,7 +254,6 @@ variable "behaviours" {
         arn  = string
       }))
       origin_request = optional(object({
-        type         = string
         arn          = string
         include_body = optional(bool)
       }))
@@ -312,7 +307,6 @@ variable "behaviours" {
         arn  = string
       }))
       origin_request = optional(object({
-        type         = string
         arn          = string
         include_body = optional(bool)
       }))
@@ -321,6 +315,59 @@ variable "behaviours" {
         arn  = string
       }))
     }))
+    additional_origins = optional(map(object({
+      zone_overrides = optional(map(object({
+        paths = optional(list(string))
+      })))
+      paths = optional(list(string))
+      path_overrides = optional(map(object({
+        allowed_methods          = optional(list(string))
+        cached_methods           = optional(list(string))
+        cache_policy_id          = optional(string)
+        origin_request_policy_id = optional(string)
+        compress                 = optional(bool)
+        viewer_protocol_policy   = optional(string)
+        viewer_request = optional(object({
+          type         = string
+          arn          = string
+          include_body = optional(bool)
+        }))
+        viewer_response = optional(object({
+          type = string
+          arn  = string
+        }))
+        origin_request = optional(object({
+          arn          = string
+          include_body = bool
+        }))
+        origin_response = optional(object({
+          arn = string
+        }))
+      })))
+      allowed_methods          = optional(list(string))
+      cached_methods           = optional(list(string))
+      cache_policy_id          = optional(string)
+      origin_request_policy_id = optional(string)
+      compress                 = optional(bool)
+      viewer_protocol_policy   = optional(string)
+      viewer_request = optional(object({
+        type         = string
+        arn          = string
+        include_body = optional(bool)
+      }))
+      viewer_response = optional(object({
+        type = string
+        arn  = string
+      }))
+      origin_request = optional(object({
+        arn          = string
+        include_body = optional(bool)
+      }))
+      origin_response = optional(object({
+        type = string
+        arn  = string
+      }))
+    })))
     image_optimisation = optional(object({
       zone_overrides = optional(map(object({
         paths = optional(list(string))
@@ -366,7 +413,6 @@ variable "behaviours" {
         arn  = string
       }))
       origin_request = optional(object({
-        type         = string
         arn          = string
         include_body = optional(bool)
       }))

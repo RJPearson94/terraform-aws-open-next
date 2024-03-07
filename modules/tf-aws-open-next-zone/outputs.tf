@@ -20,7 +20,7 @@ output "zone_config" {
 
 output "behaviours" {
   description = "The behaviours for the zone"
-  value       = local.behaviours
+  value       = local.zone_behaviours
 }
 
 output "custom_error_responses" {

@@ -10,6 +10,12 @@ variable "suffix" {
   default     = null
 }
 
+variable "open_next_version" {
+  description = "The version of open next that is used"
+  type        = string
+  default     = "v2.x.x"
+}
+
 variable "deployment" {
   description = "The deployment model for the multi zone website"
   type        = string
@@ -141,6 +147,63 @@ variable "warmer_function" {
   default = {}
 }
 
+variable "edge_functions" {
+  description = "Default configutation for all edge functions with the ability to override the configuration per edge function. This can be overridden for each zone"
+  type = object({
+    runtime                          = optional(string, "nodejs20.x")
+    timeout                          = optional(number, 10)
+    memory_size                      = optional(number, 512)
+    additional_environment_variables = optional(map(string), {})
+    additional_iam_policies = optional(list(object({
+      name   = string,
+      arn    = optional(string)
+      policy = optional(string)
+    })), [])
+    iam = optional(object({
+      path                 = optional(string)
+      permissions_boundary = optional(string)
+    }))
+    timeouts = optional(object({
+      create = optional(string)
+      update = optional(string)
+      delete = optional(string)
+    }), {})
+    function_overrides = optional(map(object({
+      function_code = optional(object({
+        handler = optional(string, "handler.handler")
+        zip = optional(object({
+          path = string
+          hash = string
+        }))
+        s3 = optional(object({
+          bucket         = string
+          key            = string
+          object_version = optional(string)
+        }))
+      }))
+      runtime                          = optional(string, "nodejs20.x")
+      timeout                          = optional(number, 10)
+      memory_size                      = optional(number, 512)
+      additional_environment_variables = optional(map(string), {})
+      additional_iam_policies = optional(list(object({
+        name   = string,
+        arn    = optional(string)
+        policy = optional(string)
+      })), [])
+      iam = optional(object({
+        path                 = optional(string)
+        permissions_boundary = optional(string)
+      }))
+      timeouts = optional(object({
+        create = optional(string)
+        update = optional(string)
+        delete = optional(string)
+      }), {})
+    })), {})
+  })
+  default = {}
+}
+
 variable "server_function" {
   description = "Configuration for the server function. This can be overridden for each zone"
   type = object({
@@ -184,6 +247,93 @@ variable "server_function" {
       update = optional(string)
       delete = optional(string)
     }), {})
+  })
+  default = {}
+}
+
+variable "additional_server_functions" {
+  description = "Default configutation for all additional server functions with the ability to override the configuration per function. This can be overridden for each zone"
+  type = object({
+    enable_streaming                 = optional(bool)
+    runtime                          = optional(string, "nodejs20.x")
+    backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
+    timeout                          = optional(number, 10)
+    memory_size                      = optional(number, 1024)
+    function_architecture            = optional(string)
+    additional_environment_variables = optional(map(string), {})
+    iam_policies = optional(object({
+      include_bucket_access             = optional(bool, false)
+      include_revalidation_queue_access = optional(bool, false)
+      include_tag_mapping_db_access     = optional(bool, false)
+    }), {})
+    additional_iam_policies = optional(list(object({
+      name   = string,
+      arn    = optional(string)
+      policy = optional(string)
+    })), [])
+    vpc = optional(object({
+      security_group_ids = list(string),
+      subnet_ids         = list(string)
+    }))
+    iam = optional(object({
+      path                 = optional(string)
+      permissions_boundary = optional(string)
+    }))
+    cloudwatch_log = optional(object({
+      retention_in_days = number
+    }))
+    timeouts = optional(object({
+      create = optional(string)
+      update = optional(string)
+      delete = optional(string)
+    }), {})
+    function_overrides = optional(map(object({
+      function_code = optional(object({
+        handler = optional(string, "index.handler")
+        zip = optional(object({
+          path = string
+          hash = string
+        }))
+        s3 = optional(object({
+          bucket         = string
+          key            = string
+          object_version = optional(string)
+        }))
+      }))
+      enable_streaming                 = optional(bool)
+      runtime                          = optional(string, "nodejs20.x")
+      backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
+      timeout                          = optional(number, 10)
+      memory_size                      = optional(number, 1024)
+      function_architecture            = optional(string)
+      additional_environment_variables = optional(map(string), {})
+      iam_policies = optional(object({
+        include_bucket_access             = optional(bool, false)
+        include_revalidation_queue_access = optional(bool, false)
+        include_tag_mapping_db_access     = optional(bool, false)
+      }), {})
+      additional_iam_policies = optional(list(object({
+        name   = string,
+        arn    = optional(string)
+        policy = optional(string)
+      })), [])
+      vpc = optional(object({
+        security_group_ids = list(string),
+        subnet_ids         = list(string)
+      }))
+      iam = optional(object({
+        path                 = optional(string)
+        permissions_boundary = optional(string)
+      }))
+      cloudwatch_log = optional(object({
+        retention_in_days = number
+      }))
+      timeouts = optional(object({
+        create = optional(string)
+        update = optional(string)
+        delete = optional(string)
+      }), {})
+    })), {})
   })
   default = {}
 }
@@ -536,6 +686,57 @@ variable "behaviours" {
         arn  = string
       }))
     }))
+    additional_origins = optional(map(object({
+      paths = optional(list(string))
+      path_overrides = optional(map(object({
+        allowed_methods          = optional(list(string))
+        cached_methods           = optional(list(string))
+        cache_policy_id          = optional(string)
+        origin_request_policy_id = optional(string)
+        compress                 = optional(bool)
+        viewer_protocol_policy   = optional(string)
+        viewer_request = optional(object({
+          type         = string
+          arn          = string
+          include_body = optional(bool)
+        }))
+        viewer_response = optional(object({
+          type = string
+          arn  = string
+        }))
+        origin_request = optional(object({
+          arn          = string
+          include_body = bool
+        }))
+        origin_response = optional(object({
+          arn = string
+        }))
+      })))
+      allowed_methods          = optional(list(string))
+      cached_methods           = optional(list(string))
+      cache_policy_id          = optional(string)
+      origin_request_policy_id = optional(string)
+      compress                 = optional(bool)
+      viewer_protocol_policy   = optional(string)
+      viewer_request = optional(object({
+        type         = string
+        arn          = string
+        include_body = optional(bool)
+      }))
+      viewer_response = optional(object({
+        type = string
+        arn  = string
+      }))
+      origin_request = optional(object({
+        type         = string
+        arn          = string
+        include_body = optional(bool)
+      }))
+      origin_response = optional(object({
+        type = string
+        arn  = string
+      }))
+    })), {})
     image_optimisation = optional(object({
       paths = optional(list(string))
       path_overrides = map(object({
@@ -784,6 +985,7 @@ variable "zones" {
     root                  = bool
     name                  = string
     folder_path           = string
+    open_next_version     = optional(string)
     path                  = optional(string)
     prefix_path_overrides = optional(bool, true)
     s3_exclusion_regex    = optional(string)
@@ -860,6 +1062,58 @@ variable "zones" {
         delete = optional(string)
       }), {})
     }))
+    edge_functions = optional(object({
+      runtime                          = optional(string, "nodejs20.x")
+      timeout                          = optional(number, 10)
+      memory_size                      = optional(number, 512)
+      additional_environment_variables = optional(map(string), {})
+      additional_iam_policies = optional(list(object({
+        name   = string,
+        arn    = optional(string)
+        policy = optional(string)
+      })), [])
+      iam = optional(object({
+        path                 = optional(string)
+        permissions_boundary = optional(string)
+      }))
+      timeouts = optional(object({
+        create = optional(string)
+        update = optional(string)
+        delete = optional(string)
+      }), {})
+      function_overrides = optional(map(object({
+        function_code = optional(object({
+          handler = optional(string, "handler.handler")
+          zip = optional(object({
+            path = string
+            hash = string
+          }))
+          s3 = optional(object({
+            bucket         = string
+            key            = string
+            object_version = optional(string)
+          }))
+        }))
+        runtime                          = optional(string, "nodejs20.x")
+        timeout                          = optional(number, 10)
+        memory_size                      = optional(number, 512)
+        additional_environment_variables = optional(map(string), {})
+        additional_iam_policies = optional(list(object({
+          name   = string,
+          arn    = optional(string)
+          policy = optional(string)
+        })), [])
+        iam = optional(object({
+          path                 = optional(string)
+          permissions_boundary = optional(string)
+        }))
+        timeouts = optional(object({
+          create = optional(string)
+          update = optional(string)
+          delete = optional(string)
+        }), {})
+      })), {})
+    }))
     server_function = optional(object({
       function_code = optional(object({
         handler = optional(string, "index.handler")
@@ -901,6 +1155,88 @@ variable "zones" {
         update = optional(string)
         delete = optional(string)
       }), {})
+    }))
+    additional_server_functions = optional(object({
+      enable_streaming                 = optional(bool)
+      runtime                          = optional(string, "nodejs20.x")
+      backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
+      timeout                          = optional(number, 10)
+      memory_size                      = optional(number, 1024)
+      function_architecture            = optional(string)
+      additional_environment_variables = optional(map(string), {})
+      iam_policies = optional(object({
+        include_bucket_access             = optional(bool, false)
+        include_revalidation_queue_access = optional(bool, false)
+        include_tag_mapping_db_access     = optional(bool, false)
+      }), {})
+      additional_iam_policies = optional(list(object({
+        name   = string,
+        arn    = optional(string)
+        policy = optional(string)
+      })), [])
+      vpc = optional(object({
+        security_group_ids = list(string),
+        subnet_ids         = list(string)
+      }))
+      iam = optional(object({
+        path                 = optional(string)
+        permissions_boundary = optional(string)
+      }))
+      cloudwatch_log = optional(object({
+        retention_in_days = number
+      }))
+      timeouts = optional(object({
+        create = optional(string)
+        update = optional(string)
+        delete = optional(string)
+      }), {})
+      function_overrides = optional(map(object({
+        function_code = optional(object({
+          handler = optional(string, "index.handler")
+          zip = optional(object({
+            path = string
+            hash = string
+          }))
+          s3 = optional(object({
+            bucket         = string
+            key            = string
+            object_version = optional(string)
+          }))
+        }))
+        enable_streaming                 = optional(bool)
+        runtime                          = optional(string, "nodejs20.x")
+        backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
+        timeout                          = optional(number, 10)
+        memory_size                      = optional(number, 1024)
+        function_architecture            = optional(string)
+        additional_environment_variables = optional(map(string), {})
+        iam_policies = optional(object({
+          include_bucket_access             = optional(bool, false)
+          include_revalidation_queue_access = optional(bool, false)
+          include_tag_mapping_db_access     = optional(bool, false)
+        }), {})
+        additional_iam_policies = optional(list(object({
+          name   = string,
+          arn    = optional(string)
+          policy = optional(string)
+        })), [])
+        vpc = optional(object({
+          security_group_ids = list(string),
+          subnet_ids         = list(string)
+        }))
+        iam = optional(object({
+          path                 = optional(string)
+          permissions_boundary = optional(string)
+        }))
+        cloudwatch_log = optional(object({
+          retention_in_days = number
+        }))
+        timeouts = optional(object({
+          create = optional(string)
+          update = optional(string)
+          delete = optional(string)
+        }), {})
+      })), {})
     }))
     image_optimisation_function = optional(object({
       create = optional(bool, true)
@@ -1217,6 +1553,57 @@ variable "zones" {
           arn  = string
         }))
       }))
+      additional_origins = optional(map(object({
+        paths = optional(list(string))
+        path_overrides = optional(map(object({
+          allowed_methods          = optional(list(string))
+          cached_methods           = optional(list(string))
+          cache_policy_id          = optional(string)
+          origin_request_policy_id = optional(string)
+          compress                 = optional(bool)
+          viewer_protocol_policy   = optional(string)
+          viewer_request = optional(object({
+            type         = string
+            arn          = string
+            include_body = optional(bool)
+          }))
+          viewer_response = optional(object({
+            type = string
+            arn  = string
+          }))
+          origin_request = optional(object({
+            arn          = string
+            include_body = bool
+          }))
+          origin_response = optional(object({
+            arn = string
+          }))
+        })))
+        allowed_methods          = optional(list(string))
+        cached_methods           = optional(list(string))
+        cache_policy_id          = optional(string)
+        origin_request_policy_id = optional(string)
+        compress                 = optional(bool)
+        viewer_protocol_policy   = optional(string)
+        viewer_request = optional(object({
+          type         = string
+          arn          = string
+          include_body = optional(bool)
+        }))
+        viewer_response = optional(object({
+          type = string
+          arn  = string
+        }))
+        origin_request = optional(object({
+          type         = string
+          arn          = string
+          include_body = optional(bool)
+        }))
+        origin_response = optional(object({
+          type = string
+          arn  = string
+        }))
+      })), {})
       image_optimisation = optional(object({
         paths = optional(list(string))
         path_overrides = map(object({
