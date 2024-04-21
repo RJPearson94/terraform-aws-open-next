@@ -9,10 +9,12 @@ locals {
   create_cache_policy = try(var.cache_policy.deployment, "CREATE") == "CREATE"
   cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : try(coalesce(var.cache_policy.id, var.cache_policy.arn), null)
 
-  should_create_auth_lambda = contains(["DETACH", "CREATE"], var.auth_function.deployment) || (var.auth_function.deployment != "USE_EXISTING" && length({ for zone in local.zones : "distribution" => zone if try(zone.use_auth_lambda, false) == true }) > 0)
-  auth_lambda_qualified_arn = var.auth_function.deployment == "USE_EXISTING" ? var.auth_function.qualified_arn : local.should_create_auth_lambda ? one(module.auth_function[*].qualified_arn) : null
+  should_create_auth_lambda    = contains(["DETACH", "CREATE"], var.auth_function.deployment) || (var.auth_function.deployment != "USE_EXISTING" && length({ for zone in local.zones : "${zone.name}-distribution" => zone if zone.use_auth_lambda == true || zone.server_function_auth == "AUTH_LAMBDA" || zone.image_optimisation_function_auth == "AUTH_LAMBDA" }) > 0)
+  should_create_lambda_url_oac = var.lambda_url_oac.deployment == "CREATE" || length({ for zone in local.zones : "${zone.name}-distribution" => zone if zone.server_function_auth == "OAC" || zone.image_optimisation_function_auth == "OAC" }) > 0
+  auth_lambda_qualified_arn    = var.auth_function.deployment == "USE_EXISTING" ? var.auth_function.qualified_arn : local.should_create_auth_lambda ? one(module.auth_function[*].qualified_arn) : null
 
   custom_error_responses = [for custom_error_response in var.custom_error_responses : merge(custom_error_response, { path_pattern = "/${custom_error_response.response_page.behaviour}/*" }) if custom_error_response.response_page != null]
+  includes_staging_distribution = var.continuous_deployment.use && var.continuous_deployment.deployment != "NONE"
 
   # Force the root zone to the bottom of the behaviours
   zones      = concat([for zone in var.zones : zone if zone.root == false], [for zone in var.zones : zone if zone.root == true])
@@ -92,7 +94,7 @@ locals {
           lambda_function_associations = [
             merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].viewer_request, null), try(var.behaviours.image_optimisation.viewer_request, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-request" }),
             merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].viewer_response, null), try(var.behaviours.image_optimisation.viewer_response, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-response" }),
-            merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].origin_request, null), try(var.behaviours.image_optimisation.origin_request, null), { arn = zone.use_auth_lambda ? local.auth_lambda_qualified_arn : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
+            merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].origin_request, null), try(var.behaviours.image_optimisation.origin_request, null), { arn = zone.use_auth_lambda || zone.server_function_auth == "AUTH_LAMBDA" ? local.auth_lambda_qualified_arn : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
             merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].origin_response, null), try(var.behaviours.image_optimisation.origin_response, null), { arn = null }), { type = "LAMBDA@EDGE", event_type = "origin-response" }),
           ]
         }],
@@ -116,7 +118,7 @@ locals {
           lambda_function_associations = [
             merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].viewer_request, null), try(var.behaviours.server.viewer_request, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-request" }),
             merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].viewer_response, null), try(var.behaviours.server.viewer_response, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-response" }),
-            merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].origin_request, null), try(var.behaviours.server.origin_request, null), { arn = zone.server_at_edge ? zone.server_function_arn : zone.use_auth_lambda ? local.auth_lambda_qualified_arn : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
+            merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].origin_request, null), try(var.behaviours.server.origin_request, null), { arn = zone.server_at_edge ? zone.server_function_arn : zone.use_auth_lambda || zone.image_optimisation_function_auth == "AUTH_LAMBDA" ? local.auth_lambda_qualified_arn : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
             merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].origin_response, null), try(var.behaviours.server.origin_response, null), { arn = null }), { type = "LAMBDA@EDGE", event_type = "origin-response" }),
           ]
         }]
@@ -146,7 +148,7 @@ locals {
         }],
         zone.server_at_edge ? [] : [{
           domain_name              = zone.server_domain_name
-          origin_access_control_id = null
+          origin_access_control_id = zone.server_function_auth == "OAC" ? one(aws_cloudfront_origin_access_control.lambda_url_origin_access_control[*].id) : null
           origin_id                = join("-", compact([zone.name, local.server_function_origin]))
           origin_path              = null
           origin_headers           = zone.server_origin_headers
@@ -159,7 +161,7 @@ locals {
         }],
         zone.image_optimisation_domain_name == null ? [] : [{
           domain_name              = zone.image_optimisation_domain_name
-          origin_access_control_id = null
+          origin_access_control_id = zone.image_optimisation_function_auth == "OAC" ? one(aws_cloudfront_origin_access_control.lambda_url_origin_access_control[*].id) : null
           origin_id                = join("-", compact([zone.name, local.image_optimisation_function_origin]))
           origin_path              = null
           origin_headers           = null
@@ -379,6 +381,15 @@ resource "aws_cloudfront_function" "x_forwarded_host" {
 resource "aws_cloudfront_origin_access_control" "website_origin_access_control" {
   name                              = "${local.prefix}website${local.suffix}"
   origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+resource "aws_cloudfront_origin_access_control" "lambda_url_origin_access_control" {
+  count = local.should_create_lambda_url_oac ? 1 : 0
+
+  name                              = "${local.prefix}lambda-url${local.suffix}"
+  origin_access_control_origin_type = "lambda"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
 }
@@ -701,7 +712,7 @@ resource "aws_cloudfront_distribution" "production_distribution" {
 }
 
 resource "aws_cloudfront_distribution" "staging_distribution" {
-  count = var.continuous_deployment.use && var.continuous_deployment.deployment != "NONE" ? 1 : 0
+  count = local.includes_staging_distribution ? 1 : 0
 
   dynamic "origin" {
     for_each = local.origins

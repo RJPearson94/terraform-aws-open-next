@@ -21,16 +21,32 @@ locals {
   prefix = var.prefix == null ? "" : "${var.prefix}-"
   suffix = var.suffix == null ? "" : "-${var.suffix}"
 
-  zone = {
-    server_domain_name             = lookup(module.server_function.url_hostnames, local.staging_alias, null)
-    server_function_arn            = local.server_at_edge ? module.server_function.qualified_arn : module.server_function.arn
-    server_at_edge                 = local.server_at_edge
-    image_optimisation_domain_name = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].url_hostnames)[local.staging_alias] : null
-    use_auth_lambda                = var.server_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA"
-    bucket_domain_name             = local.website_bucket_domain_name
-    bucket_origin_path             = "/${module.s3_assets.origin_asset_path}"
-    reinvalidation_hash            = sha1(join("-", concat(module.s3_assets.file_hashes, [try(module.server_function.version, "")])))
+  auth_options = {
+    "REGIONAL_LAMBDA_WITH_OAC"                   = "OAC",
+    "REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL" = "OAC",
+    "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA"           = "AUTH_LAMBDA"
   }
+
+  server_function_auth             = lookup(local.auth_options, var.server_function.backend_deployment_type, null)
+  image_optimisation_function_auth = lookup(local.auth_options, var.image_optimisation_function.backend_deployment_type, null)
+  zone = {
+    aliases                          = local.aliases
+    server_domain_name               = lookup(module.server_function.url_hostnames, local.staging_alias, null)
+    server_function_arn              = local.server_at_edge ? module.server_function.qualified_arn : module.server_function.arn
+    server_function_auth             = local.server_function_auth
+    server_function_name             = module.server_function.name
+    server_function_streaming        = var.server_function.enable_streaming == true
+    server_at_edge                   = local.server_at_edge
+    image_optimisation_domain_name   = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].url_hostnames)[local.staging_alias] : null
+    image_optimisation_function_auth = local.image_optimisation_function_auth
+    image_optimisation_function_name = try(one(module.image_optimisation_function[*].name), null)
+    use_auth_lambda                  = var.server_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA"
+    bucket_domain_name               = local.website_bucket_domain_name
+    bucket_origin_path               = "/${module.s3_assets.origin_asset_path}"
+    reinvalidation_hash              = sha1(join("-", concat(module.s3_assets.file_hashes, [try(module.server_function.version, "")])))
+  }
+
+  lambda_permissions = local.create_distribution ? merge([for distribution in try(one(module.public_resources[*].distributions_provisioned), []) : { for alias in local.aliases : "${distribution}-${alias}" => { distribution = distribution, alias = alias } }]...) : {}
 
   user_supplied_behaviours = coalesce(var.behaviours, { custom_error_responses = null, static_assets = null, server = null, image_optimisation = null })
   behaviours = merge(local.user_supplied_behaviours, {
@@ -84,6 +100,7 @@ module "public_resources" {
   geo_restrictions          = var.distribution.geo_restrictions
   x_forwarded_host_function = var.distribution.x_forwarded_host_function
   auth_function             = var.distribution.auth_function
+  lambda_url_oac            = var.distribution.lambda_url_oac
   cache_policy              = var.distribution.cache_policy
 
   behaviours            = local.behaviours
@@ -283,9 +300,10 @@ module "server_function" {
   run_at_edge = local.server_at_edge
 
   function_url = {
-    create             = local.server_at_edge == false
-    authorization_type = var.server_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA" ? "AWS_IAM" : "NONE"
-    enable_streaming   = var.server_function.enable_streaming
+    create              = local.server_at_edge == false
+    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], local.server_function_auth), false) ? "AWS_IAM" : "NONE"
+    allow_any_principal = var.server_function.backend_deployment_type != "REGIONAL_LAMBDA_WITH_OAC"
+    enable_streaming    = var.server_function.enable_streaming
   }
 
   scripts = var.scripts
@@ -294,6 +312,18 @@ module "server_function" {
     aws     = aws.server_function
     aws.iam = aws.iam
   }
+}
+
+# Moved to the single-zone to prevent a cyclic dependency
+resource "aws_lambda_permission" "server_function_url_permission" {
+  for_each = local.zone.server_function_auth == "OAC" ? local.lambda_permissions : {}
+
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = module.server_function.name
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
+  qualifier              = each.value.alias
+  function_url_auth_type = "AWS_IAM"
 }
 
 # Warmer Function
@@ -401,8 +431,9 @@ module "image_optimisation_function" {
   suffix = var.suffix
 
   function_url = {
-    create             = true
-    authorization_type = var.image_optimisation_function.backend_deployment_type == "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA" ? "AWS_IAM" : "NONE"
+    create              = true
+    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], local.image_optimisation_function_auth), false) ? "AWS_IAM" : "NONE"
+    allow_any_principal = var.image_optimisation_function.backend_deployment_type != "REGIONAL_LAMBDA_WITH_OAC"
   }
 
   aliases = {
@@ -418,6 +449,17 @@ module "image_optimisation_function" {
   providers = {
     aws.iam = aws.iam
   }
+}
+
+resource "aws_lambda_permission" "image_optimisation_function_url_permission" {
+  for_each = local.image_optimisation_function_auth == "OAC" ? local.lambda_permissions : {}
+
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = module.server_function.name
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
+  qualifier              = each.value.alias
+  function_url_auth_type = "AWS_IAM"
 }
 
 # Revalidation Function

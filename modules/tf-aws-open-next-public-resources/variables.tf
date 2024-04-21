@@ -103,6 +103,19 @@ variable "auth_function" {
   }
 }
 
+variable "lambda_url_oac" {
+  description = "Configuration for the OAC lambda url"
+  type = object({
+    deployment = optional(string, "NONE")
+  })
+  default = {}
+
+  validation {
+    condition     = contains(["NONE", "CREATE"], var.lambda_url_oac.deployment)
+    error_message = "The lambda URL OAC deployment can be one of NONE or CREATE"
+  }
+}
+
 variable "cache_policy" {
   description = "Configuration for the CloudFront cache policy. NOTE: please use ID as ARN is deprecated"
   type = object({
@@ -131,20 +144,22 @@ variable "cache_policy" {
 }
 
 variable "zones" {
-  description = "Configuration for the website zones to assoicate with the distribution"
+  description = "Configuration for the website zones to assoicate with the distribution. NOTE: please use server_function_auth and image_optimisation_function_auth as use_auth_lambda is deprecated"
   type = list(object({
-    root                           = bool
-    name                           = string
-    server_domain_name             = string
-    server_function_arn            = string
-    bucket_domain_name             = string
-    bucket_origin_path             = string
-    reinvalidation_hash            = string
-    server_at_edge                 = bool
-    use_auth_lambda                = bool
-    image_optimisation_domain_name = optional(string)
-    path                           = optional(string)
-    server_origin_headers          = optional(map(string))
+    root                             = bool
+    name                             = string
+    server_domain_name               = string
+    server_function_arn              = string
+    server_at_edge                   = bool
+    bucket_domain_name               = string
+    bucket_origin_path               = string
+    reinvalidation_hash              = string
+    use_auth_lambda                  = bool
+    image_optimisation_domain_name   = optional(string)
+    image_optimisation_function_auth = optional(string)
+    path                             = optional(string)
+    server_function_auth             = optional(string)
+    server_origin_headers            = optional(map(string))
   }))
 
   validation {
@@ -155,6 +170,20 @@ variable "zones" {
   validation {
     condition     = length([for zone in var.zones : zone if zone.root == true]) == 1
     error_message = "There must be exactly 1 root zone"
+  }
+
+  validation {
+    condition = alltrue([
+      for zone in var.zones : contains(["OAC", "AUTH_LAMBDA"], zone.server_function_auth) if zone.server_function_auth != null
+    ])
+    error_message = "All server function auth should be either null, OAC or AUTH_LAMBDA"
+  }
+
+  validation {
+    condition = alltrue([
+      for zone in var.zones : contains(["OAC", "AUTH_LAMBDA"], zone.image_optimisation_function_auth) if zone.image_optimisation_function_auth != null 
+    ])
+    error_message = "All image optimisation function auth should be either null, OAC or AUTH_LAMBDA"
   }
 }
 

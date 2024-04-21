@@ -1,4 +1,4 @@
-variable "prefix" {
+ variable "prefix" {
   description = "A prefix which will be attached to the resource name to ensure resources are random"
   type        = string
   default     = null
@@ -11,7 +11,7 @@ variable "suffix" {
 }
 
 variable "s3_folder_prefix" {
-  description = "An optional folder to store files under"
+  description = "An optional folder to store uploaded assets and cached files under"
   type        = string
   default     = null
 }
@@ -34,13 +34,13 @@ variable "s3_exclusion_regex" {
 }
 
 variable "function_architecture" {
-  description = "The default instruction set architecture for the lambda functions. This can be overridden for each function"
+  description = "The default instruction set architecture for the lambda functions. This can be overridden for each function."
   type        = string
   default     = "arm64"
 }
 
 variable "iam" {
-  description = "The default IAM configuration. This can be overridden for each function"
+  description = "The default IAM configuration. This can be overridden for each function."
   type = object({
     path                 = optional(string, "/")
     permissions_boundary = optional(string)
@@ -49,7 +49,7 @@ variable "iam" {
 }
 
 variable "cloudwatch_log" {
-  description = "The default cloudwatch log group. This can be overridden for each function"
+  description = "The default cloudwatch log group. This can be overridden for each function."
   type = object({
     retention_in_days = number
   })
@@ -59,7 +59,7 @@ variable "cloudwatch_log" {
 }
 
 variable "vpc" {
-  description = "The default VPC configuration for the lambda resources. This can be overridden for each function"
+  description = "The default VPC configuration for the lambda resources. This can be overridden for each function."
   type = object({
     security_group_ids = list(string),
     subnet_ids         = list(string)
@@ -97,7 +97,17 @@ variable "content_types" {
 }
 
 variable "warmer_function" {
-  description = "Configuration for the warmer function"
+  description = <<EOF
+Configuration for the warmer function.
+
+By default, the module will create a new zip from the warmer function code on disk. However, you can override this by supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
+
+If the warmer function is enabled, you can conditionally choose to warm the staging distribution. Enabling this will provision another lambda function. By default, the warmer for the staging distribution will use the same concurrency value as the production distribution. However, you can override this value by specifying a `concurrency` value for the `warm_staging` object.
+
+This function is deployed to the region specified on the default AWS Terraform provider.
+
+EOF
+
   type = object({
     enabled = optional(bool, false)
     warm_staging = optional(object({
@@ -149,7 +159,35 @@ variable "warmer_function" {
 }
 
 variable "server_function" {
-  description = "Configuration for the server function"
+  description = <<EOF
+Configuration for the server function.
+
+By default, the module will create a new zip from the server function code on disk. However, you can override this by supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
+
+Possible values for backend_deployment_type: 
+  - REGIONAL_LAMBDA_WITH_AUTH_LAMBDA
+  - REGIONAL_LAMBDA_WITH_OAC
+  - REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL
+  - REGIONAL_LAMBDA
+  - EDGE_LAMBDA
+
+See https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.3.0/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
+
+**NOTE:** When backend_deployment_type is set to EDGE_LAMBDA, Terraform does not manage cloudwatch log groups; instead, the lambda service creates the log group when the function runs in each region.
+
+If you run the server function as a lambda@edge, you should increase the deletion timeout to 2 hours `120m`. As the lambda service needs to wait for the replicas to be removed, this often exceeds the default 10-minute deletion timeout. This extended timeout allows Terraform to poll for longer and should help mitigate Terraform failures; an example Terraform configuration can be seen below.
+
+```
+timeouts = {
+  deletion = "120m"
+}
+```
+
+As lambda@edge doesn't support environment variables, the environment variables are injected into the source code before the zip is generated. 
+**NOTE:** If the lambda function code is supplied as a zip or via an S3 reference, this code modification will not occur
+
+EOF
+
   type = object({
     function_code = optional(object({
       handler = optional(string, "index.handler")
@@ -195,13 +233,29 @@ variable "server_function" {
   default = {}
 
   validation {
-    condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA", "EDGE_LAMBDA"], var.server_function.backend_deployment_type)
-    error_message = "The server function backend deployment type can be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA, REGIONAL_LAMBDA or EDGE_LAMBDA"
+    condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA_WITH_OAC", "REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL", "REGIONAL_LAMBDA", "EDGE_LAMBDA"], var.server_function.backend_deployment_type)
+    error_message = "The server function backend deployment type can be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA, REGIONAL_LAMBDA_WITH_OAC, REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL, REGIONAL_LAMBDA or EDGE_LAMBDA"
   }
 }
 
 variable "image_optimisation_function" {
-  description = "Configuration for the image optimisation function"
+  description = <<EOF
+Configuration for the image optimisation function.
+
+By default, the module will create a new zip from the image optimisation function code on disk. However, you can override this by supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
+
+Possible values for backend_deployment_type: 
+  - REGIONAL_LAMBDA_WITH_AUTH_LAMBDA
+  - REGIONAL_LAMBDA_WITH_OAC
+  - REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL
+  - REGIONAL_LAMBDA
+
+See https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.3.0/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
+
+If you do not want to provision the image optimisation function, you can set `create` to false.
+
+EOF
+
   type = object({
     create = optional(bool, true)
     function_code = optional(object({
@@ -247,13 +301,21 @@ variable "image_optimisation_function" {
   default = {}
 
   validation {
-    condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA"], var.image_optimisation_function.backend_deployment_type)
-    error_message = "The server function backend deployment type can be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA or REGIONAL_LAMBDA"
+    condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA_WITH_OAC", "REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL", "REGIONAL_LAMBDA"], var.image_optimisation_function.backend_deployment_type)
+    error_message = "The image optimisation function backend deployment type can be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA, REGIONAL_LAMBDA_WITH_OAC, REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL or REGIONAL_LAMBDA"
   }
 }
 
 variable "revalidation_function" {
-  description = "Configuration for the revalidation function"
+  description = <<EOF
+Configuration for the revalidation function.
+
+By default, the module will create a new zip from the revalidation function code on disk. However, you can override this by supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
+
+This function is deployed to the region specified on the default AWS Terraform provider.
+
+EOF
+
   type = object({
     function_code = optional(object({
       handler = optional(string, "index.handler")
@@ -298,7 +360,19 @@ variable "revalidation_function" {
 }
 
 variable "tag_mapping_db" {
-  description = "Configuration for the ISR tag mapping database"
+  description = <<EOF
+Configuration for the ISR tag mapping database
+
+By default, the module uploads the items in the dynamodb-cache JSON file stored locally. The cache alias is appended to each item in the DB.
+
+Possible values for deployment:
+- NONE
+- CREATE
+
+The read and write capacity for the Global Secondary Index (GSI) can be overridden; however, the table's read and write capacity will be used by default.
+
+EOF
+
   type = object({
     deployment     = optional(string, "CREATE")
     billing_mode   = optional(string, "PAY_PER_REQUEST")
@@ -313,7 +387,23 @@ variable "tag_mapping_db" {
 }
 
 variable "website_bucket" {
-  description = "Configuration for the website S3 bucket"
+  description = <<EOF
+Configuration for the website S3 bucket
+
+By default, the module will upload the assets and cache folders that are stored locally.
+
+Possible values for deployment:
+- NONE
+- CREATE
+
+This bucket is deployed to the region specified on the default AWS Terraform provider.
+
+If deployment is set to `NONE`, then arn, region, name & domain_name are required fields.
+
+**WARNING:** The bucket is fundamental to the architecture, and the module is optional to facilitate sharing a bucket for multi-zone deployments and to support edge cases not supported by the module. With that said, it is not recommended to supply a bucket.
+
+EOF
+
   type = object({
     deployment           = optional(string, "CREATE")
     create_bucket_policy = optional(bool, true)
@@ -327,7 +417,71 @@ variable "website_bucket" {
 }
 
 variable "distribution" {
-  description = "Configuration for the CloudFront distribution. NOTE: please use ID as ARN for the cache policy is deprecated"
+  description = <<EOF
+Configuration for the CloudFront distribution. 
+
+Possible values for deployment are:
+- NONE
+- CREATE
+
+The module has a local copy of the x-forwarded host CloudFront function code by default. The code can be seen at https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.3.0/modules/tf-aws-open-next-public-resources/code/xForwardedHost.js. 
+
+This code can be overridden by passing in the javascript function as a string to the `code` argument under the `x_forwarded_host_function` object. An example can be seen below.
+
+```
+x_forwarded_host_function = {
+  code = "function handler(event) { var request = event.request; request.headers['x-forwarded-host'] = request.headers.host; return request; }"
+}
+```
+
+The auth function is deployed if the server function backend_deployment_type is set to EDGE_LAMBDA.
+
+The module has a local copy of the auth function code, which will be deployed by default. The code can be seen at https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.3.0/modules/tf-aws-open-next-public-resources/code/auth/index.js. You can override this to supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
+
+Possible values for the auth_function deployment are:
+- NONE 
+- USE_EXISTING
+- CREATE
+- DETACH
+
+The auth function arn is mandatory when deployment is set to `USE_EXISTING`.
+
+When migrating from using the auth function to either public cloud functions or to using OAC, you should set the deployment on the auth_function to CREATE, then apply the changes. Then, you can set deployment to false in a subsequent change to clean up the function.
+
+If you run the server function as a lambda@edge, you should increase the deletion timeout to 2 hours `120m`. As the lambda service needs to wait for the replicas to be removed, this often exceeds the default 10-minute deletion timeout. This extended timeout allows Terraform to poll for longer and should help mitigate Terraform failures; an example Terraform configuration can be seen below.
+
+```
+auth_function = {
+  timeouts = {
+    deletion = "120m"
+  }
+}
+```
+
+As lambda@edge doesn't support environment variables, the environment variables are injected into the source code before the zip is generated. 
+**NOTE:** If the lambda function code is supplied as a zip or via an S3 reference, this code modification will not occur
+
+Terraform does not manage cloudwatch log groups for the auth function; the lambda service creates the log group when the function runs in each region.
+The inclusion of the variable is a mistake; this is deprecated and will be removed in the next major version of the module.
+
+CloudFront supports Origin Access Control (OAC) for lambda URLs. The possible values for the deployment options are:
+- NONE
+- CREATE
+
+**NOTE:** If the server function or image optimisation function backend deployment types use OAC, then the OAC will be created.
+
+As there is a limit on the number of cache policies associated with an AWS account, you can either configure the module to create the cache policy or use an existing one. The possible values for the cache policy deployment are:
+- USE_EXISTING
+- CREATE
+
+If cache policy deployment is set to `USE_EXISTING`, then ID, is a required field.
+
+**NOTE:** Please use ID as ARN for the cache policy is deprecated
+
+**WARNING:** The distribution is fundamental to the architecture, and the module is optional to facilitate sharing a distribution for multi-zone deployments and to support edge cases not supported by the module. With that said, it is not recommended to supply a distribution.
+
+EOF
+
   type = object({
     deployment   = optional(string, "CREATE")
     enabled      = optional(bool, true)
@@ -377,6 +531,9 @@ variable "distribution" {
         update = optional(string)
         delete = optional(string)
       }), {})
+    }), {})
+    lambda_url_oac = optional(object({
+      deployment = optional(string, "NONE")
     }), {})
     cache_policy = optional(object({
       deployment            = optional(string, "CREATE")
@@ -606,7 +763,41 @@ variable "behaviours" {
 }
 
 variable "waf" {
-  description = "Configuration for the CloudFront distribution WAF. For enforce basic auth, to protect the secret value, the encoded string has been marked as sensitive. I would make this configurable to allow it to be marked as sensitive or not however Terraform panics when you use the sensitive function as part of a ternary. If you need to see all rules, see this discussion https://discuss.hashicorp.com/t/how-to-show-sensitive-values/24076/4"
+  description = <<EOF
+Configuration for the CloudFront distribution WAF.
+
+Possible values for the WAF deployment are:
+- NONE 
+- USE_EXISTING
+- CREATE
+- DETACH
+
+The web_acl_id is mandatory when deployment is set to `USE_EXISTING`.
+
+When configuring basic authentication, the encoded username and password are marked as sensitive. This can be turned off by setting `mark_as_sensitive` to false; however, a bug in Terraform v1.6.0 prevented this from working. If this occurs, please upgrade to at least v1.6.1.
+
+Possible values for the WAF default action are:
+- ALLOW
+- BLOCK
+
+The module provides the ability to configure recommended WAF rules to guard against SQL Injection (sqli), account takeover protection and account creation fraud prevention.
+
+Multiple rate limits can be configured with each limit applied across all geographic regions or limited to a specific region. The possible values for the action are:
+- COUNT
+- BLOCK
+
+ The possible values for the action of each additional rule are:
+- COUNT
+- BLOCK
+
+When IP address restrictions are used as part of additional rules or enforcing basic auth, the possible values for the action are:
+- BYPASS
+- BLOCK
+
+Examples of maintenance pages, basic auth, and more can be found at https://github.com/RJPearson94/terraform-aws-open-next-examples.
+
+EOF
+
   type = object({
     deployment = optional(string, "NONE")
     web_acl_id = optional(string)
@@ -735,7 +926,13 @@ variable "waf" {
 }
 
 variable "domain_config" {
-  description = "Configuration for CloudFront distribution domain"
+  description = <<EOF
+Configuration for CloudFront distribution domain
+
+See https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.3.0/docs/domain-config.md for a complete breakdown of the different domain configuration options. 
+
+EOF
+
   type = object({
     evaluate_target_health = optional(bool, true)
     include_www            = optional(bool, false)
@@ -757,7 +954,13 @@ variable "domain_config" {
 }
 
 variable "continuous_deployment" {
-  description = "Configuration for continuous deployment config for CloudFront"
+  description = <<EOF
+Configuration for continuous deployment config for CloudFront
+
+See https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.3.0/docs/continuous-deployments.md for a complete breakdown of how to use continuous deployment. 
+
+EOF
+
   type = object({
     use        = optional(bool, true)
     deployment = optional(string, "NONE")
@@ -779,7 +982,13 @@ variable "continuous_deployment" {
 }
 
 variable "custom_error_responses" {
-  description = "Allow custom error responses to be set on the distributions"
+  description = <<EOF
+Allow custom error responses to be set on the distributions
+
+**NOTE:** These custom error pages only apply to response codes from the origins. To configure custom error responses for status codes returned by WAF, please configure the custom error responses in WAF.
+
+EOF
+
   type = list(object({
     error_code            = string
     error_caching_min_ttl = optional(number)

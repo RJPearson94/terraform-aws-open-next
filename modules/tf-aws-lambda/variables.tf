@@ -113,9 +113,10 @@ variable "publish" {
 variable "function_url" {
   description = "Configure function URL"
   type = object({
-    create             = optional(bool, true)
-    authorization_type = optional(string, "NONE")
-    enable_streaming   = optional(bool, false)
+    create              = optional(bool, true)
+    allow_any_principal = optional(bool, false)
+    authorization_type  = optional(string, "NONE")
+    enable_streaming    = optional(bool, false)
   })
   default = {}
 }

@@ -6,6 +6,22 @@ locals {
   zones                   = [for zone in var.zones : merge(zone, { path = var.deployment == "INDEPENDENT_ZONES" || zone.root == true ? null : coalesce(zone.path, zone.name) })]
   use_shared_distribution = contains(["SHARED_DISTRIBUTION_AND_BUCKET", "SHARED_DISTRIBUTION"], var.deployment)
 
+  zone_details = local.use_shared_distribution ? merge(flatten([
+    for zone in local.zones : [
+      for distribution_name in try(one(module.public_resources[*].distributions_provisioned), []) : {
+        for alias in try(module.website_zone[zone.name].zone_config.aliases, []) : "${distribution_name}-${zone.name}-${alias}" => {
+          server_function_name             = module.website_zone[zone.name].zone_config.server_function_name
+          server_function_auth             = module.website_zone[zone.name].zone_config.server_function_auth
+          image_optimisation_function_name = module.website_zone[zone.name].zone_config.image_optimisation_function_name
+          image_optimisation_function_auth = module.website_zone[zone.name].zone_config.image_optimisation_function_auth
+          zone_name                        = zone.name,
+          distribution_name                = distribution_name,
+          alias                            = alias
+        }
+      }
+    ]
+  ])...) : {}
+
   merged_static_assets = {
     zone_overrides = { for zone in local.zones : zone.name => {
       paths            = try(module.website_zone[zone.name].behaviours.static_assets.paths, null)
@@ -131,7 +147,7 @@ module "website_zone" {
   tag_mapping_db = try(coalesce(each.value.tag_mapping_db, var.tag_mapping_db), null)
 
   website_bucket         = var.deployment != "SHARED_DISTRIBUTION_AND_BUCKET" ? merge(try(coalesce(each.value.website_bucket, var.website_bucket), {}), { deployment = "CREATE", create_bucket_policy = var.deployment == "INDEPENDENT_ZONES" }) : { deployment = "NONE", arn = one(aws_s3_bucket.shared_bucket[*].arn), name = one(aws_s3_bucket.shared_bucket[*].id), region = data.aws_region.current.name, domain_name = one(aws_s3_bucket.shared_bucket[*].bucket_regional_domain_name) }
-  distribution           = var.deployment == "INDEPENDENT_ZONES" ? try(coalesce(each.value.distribution, var.distribution), {}) : { deployment = "NONE", enabled = null, ipv6_enabled = null, http_version = null, price_class = null, geo_restrictions = null, x_forwarded_host_function = null, auth_function = null, cache_policy = null }
+  distribution           = var.deployment == "INDEPENDENT_ZONES" ? try(coalesce(each.value.distribution, var.distribution), {}) : { deployment = "NONE", enabled = null, ipv6_enabled = null, http_version = null, price_class = null, geo_restrictions = null, x_forwarded_host_function = null, auth_function = null, lambda_url_oac = null, cache_policy = null }
   waf                    = try(coalesce(each.value.waf, var.waf), null)
   domain_config          = try(coalesce(each.value.domain_config, var.domain_config), null)
   continuous_deployment  = coalesce(each.value.continuous_deployment, var.continuous_deployment)
@@ -148,6 +164,29 @@ module "website_zone" {
 }
 
 # Moved to the multi-zone to prevent a cyclic dependency
+
+resource "aws_lambda_permission" "server_function_url_permission" {
+  for_each = { for key, zone_detail in local.zone_details : key => zone_detail if zone_detail.server_function_auth == "OAC" }
+
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = each.value.server_function_name
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = each.value.distribution_name == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
+  qualifier              = each.value.alias
+  function_url_auth_type = "AWS_IAM"
+}
+
+resource "aws_lambda_permission" "image_optimisation_function_url_permission" {
+  for_each = { for key, zone_detail in local.zone_details : key => zone_detail if zone_detail.image_optimisation_function_auth == "OAC" }
+
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = each.value.image_optimisation_function_name
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = each.value.distribution_name == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
+  qualifier              = each.value.alias
+  function_url_auth_type = "AWS_IAM"
+}
+
 resource "aws_s3_bucket_policy" "shared_distribution_bucket_policy" {
   for_each = var.deployment == "SHARED_DISTRIBUTION" ? { for zone in local.zones : zone.name => zone } : {}
   bucket   = module.website_zone[each.key].bucket_name

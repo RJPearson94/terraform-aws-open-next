@@ -94,7 +94,7 @@ resource "aws_lambda_function_url" "function_url" {
 }
 
 resource "aws_lambda_permission" "function_url_permission" {
-  count = var.run_at_edge == false && var.function_url.create ? 1 : 0
+  count = var.run_at_edge == false && var.function_url.create && var.function_url.allow_any_principal ? 1 : 0
 
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.lambda_function.function_name

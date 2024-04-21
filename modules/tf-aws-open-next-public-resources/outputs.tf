@@ -18,6 +18,11 @@ output "etag" {
   value       = var.continuous_deployment.use ? coalesce(try(one(terraform_data.promote_distribution[*].output.etag), null), one(aws_cloudfront_distribution.production_distribution[*].etag)) : one(aws_cloudfront_distribution.website_distribution[*].etag)
 }
 
+output "distributions_provisioned" {
+  description = "The CloudFront distributions that are provisioned"
+  value       = local.includes_staging_distribution ? ["production", "staging"] : ["production"]
+}
+
 output "staging_etag" {
   description = "The etag for the cloudfront staging distribution"
   value       = try(one(aws_cloudfront_distribution.staging_distribution[*].etag), null)
