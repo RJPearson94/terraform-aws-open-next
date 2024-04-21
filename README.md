@@ -76,7 +76,7 @@ Below are diagrams of the possible architecture combinations that can configured
 
 ### Single Zone
 
-![Single Zone Complete](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.2/docs/diagrams/Single%20Zone.png)
+![Single Zone Complete](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.4.0/docs/diagrams/Single%20Zone.png)
 
 #### Terraform
 
@@ -96,7 +96,7 @@ module "single_zone" {
 
 ```hcl
 terraform {
-  source          = "tfr://registry.terraform.io/RJPearson94/open-next/aws//modules/tf-aws-open-next-zone?version=2.0.2"
+  source          = "tfr://registry.terraform.io/RJPearson94/open-next/aws//modules/tf-aws-open-next-zone?version=2.4.0"
   include_in_copy = ["./.open-next"]
 }
 
@@ -108,7 +108,7 @@ inputs = {
 
 ### Multi-Zone - Independent Zones
 
-![Multi Zone - Independent Zones](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.2/docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
+![Multi Zone - Independent Zones](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.4.0/docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
 
 #### Terraform
 
@@ -138,7 +138,7 @@ module "independent_zones" {
 
 ```hcl
 terraform {
-  source          = "tfr://registry.terraform.io/RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone?version=2.0.2"
+  source          = "tfr://registry.terraform.io/RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone?version=2.4.0"
   include_in_copy = ["./docs/.open-next", "./home/.open-next"]
 }
 
@@ -162,7 +162,7 @@ _Note:_ If you use tools like Terragrunt or CDKTF, you can use the Single Zone m
 
 ### Multi-Zone - Shared Distribution
 
-![Multi Zone - Shared Distribution](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.2/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
+![Multi Zone - Shared Distribution](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.4.0/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
 
 #### Terraform
 
@@ -192,7 +192,7 @@ module "shared_distribution" {
 
 ```hcl
 terraform {
-  source          = "tfr://registry.terraform.io/RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone?version=2.0.2"
+  source          = "tfr://registry.terraform.io/RJPearson94/open-next/aws//modules/tf-aws-open-next-multi-zone?version=2.4.0"
   include_in_copy = ["./docs/.open-next", "./home/.open-next"]
 }
 
@@ -214,7 +214,7 @@ inputs = {
 
 ### Multi-Zone - Shared Distribution and Bucket
 
-![Multi Zone - Shared Distribution and Bucket](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.2.2/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
+![Multi Zone - Shared Distribution and Bucket](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v2.4.0/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
 
 #### Terraform
 
@@ -266,7 +266,7 @@ inputs = {
 
 ## Custom Domains
 
-For infomation on managing custom domains see the [domain-config documentation](https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.3.0/docs/domain-config.md)
+For infomation on managing custom domains see the [domain-config documentation](https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.4.0/docs/domain-config.md)
 
 ## Examples
 
