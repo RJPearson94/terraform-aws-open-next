@@ -452,10 +452,10 @@ module "image_optimisation_function" {
 }
 
 resource "aws_lambda_permission" "image_optimisation_function_url_permission" {
-  for_each = local.image_optimisation_function_auth == "OAC" ? local.lambda_permissions : {}
+  for_each = var.image_optimisation_function.create && local.image_optimisation_function_auth == "OAC" ? local.lambda_permissions : {}
 
   action                 = "lambda:InvokeFunctionUrl"
-  function_name          = module.server_function.name
+  function_name          = one(module.image_optimisation_function[*].name)
   principal              = "cloudfront.amazonaws.com"
   source_arn             = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
   qualifier              = each.value.alias
