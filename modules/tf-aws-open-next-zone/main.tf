@@ -88,6 +88,7 @@ locals {
   zone = {
     reinvalidation_hash = sha1(join("-", concat(module.s3_assets.file_hashes, [try(module.server_function.version, "")], [for edge_function in module.edge_function : edge_function.version], [for additional_server_function in module.additional_server_function : additional_server_function.version])))
     origins             = local.zone_origins
+    origin_names        = keys(local.zone_origins)
   }
 
   user_supplied_behaviours = coalesce(var.behaviours, { custom_error_responses = null, static_assets = null, server = null, image_optimisation = null, additional_origins = {} })

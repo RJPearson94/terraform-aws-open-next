@@ -6,17 +6,17 @@ locals {
   zones                   = [for zone in var.zones : merge(zone, { path = var.deployment == "INDEPENDENT_ZONES" || zone.root == true ? null : coalesce(zone.path, zone.name) })]
   use_shared_distribution = contains(["SHARED_DISTRIBUTION_AND_BUCKET", "SHARED_DISTRIBUTION"], var.deployment)
 
-  zone_details = local.use_shared_distribution ? merge(flatten([
+  function_url_permission_details = local.use_shared_distribution ? merge(flatten([
     for zone in local.zones : [
       for distribution_name in try(one(module.public_resources[*].distributions_provisioned), []) : [
         for alias in try(module.website_zone[zone.name].alias_details, []) : {
-          for origin_name, origin in try(module.website_zone[zone.name].zone_config.origins, []) : "${distribution_name}-${zone.name}-${alias}-${origin_name}" => {
-            function_name     = origin.backend_name
-            auth              = origin.auth
+          for origin_name in try(module.website_zone[zone.name].zone_config.origin_names, []) : "${distribution_name}-${zone.name}-${alias}-${origin_name}" => {
+            function_name     = module.website_zone[zone.name].zone_config.origins[origin_name].backend_name
+            auth              = module.website_zone[zone.name].zone_config.origins[origin_name].auth
             zone_name         = zone.name,
             distribution_name = distribution_name,
             alias             = alias
-          } if origin.auth == "OAC"
+          } if module.website_zone[zone.name].zone_config.origins[origin_name].auth == "OAC"
         }
       ]
     ]
@@ -176,7 +176,7 @@ module "website_zone" {
 # Moved to the multi-zone to prevent a cyclic dependency
 
 resource "aws_lambda_permission" "function_url_permission" {
-  for_each = { for key, zone_detail in local.zone_details : key => zone_detail if zone_detail.auth == "OAC" }
+  for_each = local.function_url_permission_details
 
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = each.value.function_name
