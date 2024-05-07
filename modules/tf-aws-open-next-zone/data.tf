@@ -5,8 +5,8 @@ data "aws_region" "current" {}
 data "archive_file" "server_function" {
   count       = try(var.server_function.function_code.zip, null) == null && try(var.server_function.function_code.s3, null) == null ? 1 : 0
   type        = "zip"
-  output_path = "${var.folder_path}/server-function.zip"
-  source_dir  = "${var.folder_path}/server-function"
+  output_path = "${var.folder_path}/server-functions.zip"
+  source_dir  = "${var.folder_path}/server-functions"
 
   depends_on = [local_file.lambda_at_edge_modifications]
 }
