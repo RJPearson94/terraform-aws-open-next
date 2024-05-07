@@ -179,7 +179,7 @@ You should increase the deletion timeout to 2 hours `120m`. As the lambda servic
 
 ```
 timeouts = {
-  deletion = "120m"
+  delete = "120m"
 }
 ```
 
@@ -264,7 +264,7 @@ If you run the server function as a lambda@edge, you should increase the deletio
 
 ```
 timeouts = {
-  deletion = "120m"
+  delete = "120m"
 }
 ```
 
@@ -344,7 +344,7 @@ If you run the server function as a lambda@edge, you should increase the deletio
 
 ```
 timeouts = {
-  deletion = "120m"
+  delete = "120m"
 }
 ```
 
@@ -658,7 +658,7 @@ If you run the server function as a lambda@edge, you should increase the deletio
 ```
 auth_function = {
   timeouts = {
-    deletion = "120m"
+    delete = "120m"
   }
 }
 ```
