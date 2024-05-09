@@ -2,6 +2,7 @@
 examples
 config.json
 .DS_Store
+*.drawio.bkp
 
 # Open Next
 .open-next
