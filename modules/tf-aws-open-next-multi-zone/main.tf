@@ -6,19 +6,19 @@ locals {
   zones                   = [for zone in var.zones : merge(zone, { path = var.deployment == "INDEPENDENT_ZONES" || zone.root == true ? null : coalesce(zone.path, zone.name) })]
   use_shared_distribution = contains(["SHARED_DISTRIBUTION_AND_BUCKET", "SHARED_DISTRIBUTION"], var.deployment)
 
-  zone_details = local.use_shared_distribution ? merge(flatten([
+  function_url_permission_details = local.use_shared_distribution ? merge(flatten([
     for zone in local.zones : [
-      for distribution_name in try(one(module.public_resources[*].distributions_provisioned), []) : {
-        for alias in try(module.website_zone[zone.name].zone_config.aliases, []) : "${distribution_name}-${zone.name}-${alias}" => {
-          server_function_name             = module.website_zone[zone.name].zone_config.server_function_name
-          server_function_auth             = module.website_zone[zone.name].zone_config.server_function_auth
-          image_optimisation_function_name = module.website_zone[zone.name].zone_config.image_optimisation_function_name
-          image_optimisation_function_auth = module.website_zone[zone.name].zone_config.image_optimisation_function_auth
-          zone_name                        = zone.name,
-          distribution_name                = distribution_name,
-          alias                            = alias
+      for distribution_name in try(one(module.public_resources[*].distributions_provisioned), []) : [
+        for alias in try(module.website_zone[zone.name].alias_details, []) : {
+          for origin_name in try(module.website_zone[zone.name].zone_config.origin_names, []) : "${distribution_name}-${zone.name}-${alias}-${origin_name}" => {
+            function_name     = module.website_zone[zone.name].zone_config.origins[origin_name].backend_name
+            auth              = module.website_zone[zone.name].zone_config.origins[origin_name].auth
+            zone_name         = zone.name,
+            distribution_name = distribution_name,
+            alias             = alias
+          } if module.website_zone[zone.name].zone_config.origins[origin_name].auth == "OAC"
         }
-      }
+      ]
     ]
   ])...) : {}
 
@@ -31,6 +31,11 @@ locals {
   merged_server = {
     zone_overrides = { for zone in local.zones : zone.name => {
       paths = try(module.website_zone[zone.name].behaviours.server.paths, null)
+    } }
+  }
+  merged_additional_origins = {
+    zone_overrides = { for zone in local.zones : zone.name => {
+      paths = try(module.website_zone[zone.name].behaviours.additional_origins.paths, null)
     } }
   }
   merged_image_optimisation = {
@@ -66,6 +71,7 @@ module "public_resources" {
     static_assets      = var.behaviours.static_assets == null ? local.merged_static_assets : merge(var.behaviours.static_assets, local.merged_static_assets)
     server             = var.behaviours.server == null ? local.merged_server : merge(var.behaviours.server, local.merged_server)
     image_optimisation = var.behaviours.image_optimisation == null ? local.merged_image_optimisation : merge(var.behaviours.image_optimisation, local.merged_image_optimisation)
+    additional_origins = var.behaviours.additional_origins == null ? local.merged_additional_origins : merge(var.behaviours.additional_origins, local.merged_additional_origins)
   })
 
   waf                   = var.waf
@@ -127,6 +133,8 @@ module "website_zone" {
 
   folder_path = each.value.folder_path
 
+  open_next_version = try(coalesce(each.value.open_next_version, var.open_next_version), null)
+
   zone_suffix                          = each.value.path
   s3_folder_prefix                     = var.deployment == "SHARED_DISTRIBUTION_AND_BUCKET" ? each.value.name : null
   s3_exclusion_regex                   = try(coalesce(each.value.s3_exclusion_regex, var.s3_exclusion_regex), null)
@@ -142,6 +150,8 @@ module "website_zone" {
   server_function             = try(coalesce(each.value.server_function, var.server_function), null)
   image_optimisation_function = try(coalesce(each.value.image_optimisation_function, var.image_optimisation_function), null)
   revalidation_function       = try(coalesce(each.value.revalidation_function, var.revalidation_function), null)
+  additional_server_functions = try(coalesce(each.value.additional_server_functions, var.additional_server_functions), null)
+  edge_functions              = try(coalesce(each.value.edge_functions, var.edge_functions), null)
 
   behaviours     = try(coalesce(each.value.behaviours, var.behaviours), null)
   tag_mapping_db = try(coalesce(each.value.tag_mapping_db, var.tag_mapping_db), null)
@@ -165,22 +175,11 @@ module "website_zone" {
 
 # Moved to the multi-zone to prevent a cyclic dependency
 
-resource "aws_lambda_permission" "server_function_url_permission" {
-  for_each = { for key, zone_detail in local.zone_details : key => zone_detail if zone_detail.server_function_auth == "OAC" }
+resource "aws_lambda_permission" "function_url_permission" {
+  for_each = local.function_url_permission_details
 
   action                 = "lambda:InvokeFunctionUrl"
-  function_name          = each.value.server_function_name
-  principal              = "cloudfront.amazonaws.com"
-  source_arn             = each.value.distribution_name == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
-  qualifier              = each.value.alias
-  function_url_auth_type = "AWS_IAM"
-}
-
-resource "aws_lambda_permission" "image_optimisation_function_url_permission" {
-  for_each = { for key, zone_detail in local.zone_details : key => zone_detail if zone_detail.image_optimisation_function_auth == "OAC" }
-
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = each.value.image_optimisation_function_name
+  function_name          = each.value.function_name
   principal              = "cloudfront.amazonaws.com"
   source_arn             = each.value.distribution_name == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
   qualifier              = each.value.alias

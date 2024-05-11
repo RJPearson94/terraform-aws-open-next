@@ -14,8 +14,9 @@ If you want to take advantage of some of the new features, such as:
 - CloudFront continuous deployments
   - AWS Developer Guide - https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/continuous-deployment.html
   - AWS Blog - https://aws.amazon.com/blogs/networking-and-content-delivery/use-cloudfront-continuous-deployment-to-safely-validate-cdn-changes/
-- Lambda function URLs with IAM Auth (using lambda@edge auth function)
-  - AWS Blog - https://aws.amazon.com/blogs/compute/protecting-an-aws-lambda-function-url-with-amazon-cloudfront-and-lambdaedge/
+- Lambda function URLs with IAM Auth
+  - using lambda@edge auth function - AWS Blog - https://aws.amazon.com/blogs/compute/protecting-an-aws-lambda-function-url-with-amazon-cloudfront-and-lambdaedge/
+  - using Origin Access Control - AWS Blog - https://aws.amazon.com/blogs/networking-and-content-delivery/secure-your-lambda-function-urls-using-amazon-cloudfront-origin-access-control/
 - WAF
     - Includes AWS recommended rules (AWSManagedRulesAmazonIpReputationList, AWSManagedRulesCommonRuleSet & AWSManagedRulesKnownBadInputsRuleSet)
     - Configure multiple IP rate-based rules
@@ -30,7 +31,7 @@ If you want to take advantage of some of the new features, such as:
     - Configure default action (with custom response bodies)
 - Custom Error Pages
 
-And more. Then please use 2.x of the module.
+And more. Then please use 2.x or above of the module.
 
 *Note:* V2 of the module requires you to use at least v2.0 of the open next library
 
@@ -62,6 +63,21 @@ module "legacy" {
 #### Use new single-zone or multi-zone module
 
 When upgrading to v2 of the module, it is recommended that you redeploy your application into a new Terraform state and then shift traffic over due to the number of changes compared to the legacy module. If this is not possible, you can attempt to import the existing resources into your terraform state. See the [terraform docs](https://developer.hashicorp.com/terraform/language/state/import) for more information
+
+### From 2.x to 3.x
+
+Where possible, the module has been made backwards compatible with 2.x.
+
+For open next v3, the module will read the `open-next.output.json` file in the .open-next directory to determine the edge and server functions that need to be configured, with any default configuration i.e streaming that needs to be configured.
+
+**NOTE:** Deprecated fields have been removed. If you use one of the following values, you will need to modify your Terraform/ Terragrunt configuration 
+
+- `EDGE_LAMBDA` backend deployment type is no longer supported for server function, in open next v3 this has been moved into edge functions instead [BREAKING CHANGE]
+- `aws_lambda_permission.server_function_url_permission` and `aws_lambda_permission.image_optimisation_function_url_permission` have been merged into a list of `aws_lambda_permission.function_url_permission` resources in the `tf-aws-open-next-multi-zone` module. You can either let the resources re-create or update the references using either [move config](https://developer.hashicorp.com/terraform/tutorials/configuration-language/move-config), [import block](https://developer.hashicorp.com/terraform/language/import) or [import command](https://developer.hashicorp.com/terraform/cli/commands/import) [BREAKING CHANGE]
+- CloudFront cache policy ARN - you must now set the CloudFront Cache Policy ID
+- Auth function cloudfront log group - this configuration had no affect so has been removed
+
+If you are still using open next v2.x, you can set the `open_next_version` variable to `v2.x.x` (the default value). If you upgrade to Open Next v3.x, please set the `open_next_version` variable to `v3.x.x`.
 
 ## Deployment options
 
@@ -266,7 +282,7 @@ inputs = {
 
 ## Custom Domains
 
-For infomation on managing custom domains see the [domain-config documentation](https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.4.1/docs/domain-config.md)
+For infomation on managing custom domains see the [domain config documentation](https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.4.1/docs/domain-config.md)
 
 ## Examples
 

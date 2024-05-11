@@ -1,4 +1,4 @@
- variable "prefix" {
+variable "prefix" {
   description = "A prefix which will be attached to the resource name to ensure resources are random"
   type        = string
   default     = null
@@ -25,6 +25,17 @@ variable "zone_suffix" {
 variable "folder_path" {
   description = "The path to the open next artifacts"
   type        = string
+}
+
+variable "open_next_version" {
+  description = "The version of open next that is used"
+  type        = string
+  default     = "v2.x.x"
+
+  validation {
+    condition     = can(regex("^v[0-9x]+\\.[0-9x]+\\.[0-9x]+$", var.open_next_version))
+    error_message = "The open next version must be in the format of v[0-9x]+.[0-9x]+.[0-9x]+ e.g. v2.x.x or v3.0.0"
+  }
 }
 
 variable "s3_exclusion_regex" {
@@ -158,18 +169,92 @@ EOF
   default = {}
 }
 
+variable "edge_functions" {
+  description = <<EOF
+By default, the module will create a new zip from the edge function code on disk. However, you can override this by supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
+
+**NOTE:** Terraform does not manage cloudwatch log groups; instead, the lambda service creates the log group when the function runs in each region.
+
+You should increase the deletion timeout to 2 hours `120m`. As the lambda service needs to wait for the replicas to be removed, this often exceeds the default 10-minute deletion timeout. This extended timeout allows Terraform to poll for longer and should help mitigate Terraform failures; an example Terraform configuration can be seen below.
+
+```
+timeouts = {
+  delete = "120m"
+}
+```
+
+As lambda@edge doesn't support environment variables, the environment variables are injected into the source code before the zip is generated.
+**NOTE:** If the lambda function code is supplied as a zip or via an S3 reference, this code modification will not occur
+
+EOF
+
+  type = object({
+    runtime                          = optional(string, "nodejs20.x")
+    timeout                          = optional(number, 10)
+    memory_size                      = optional(number, 512)
+    additional_environment_variables = optional(map(string), {})
+    additional_iam_policies = optional(list(object({
+      name   = string,
+      arn    = optional(string)
+      policy = optional(string)
+    })), [])
+    iam = optional(object({
+      path                 = optional(string)
+      permissions_boundary = optional(string)
+    }))
+    timeouts = optional(object({
+      create = optional(string)
+      update = optional(string)
+      delete = optional(string)
+    }), {})
+    function_overrides = optional(map(object({
+      function_code = optional(object({
+        handler = optional(string, "handler.handler")
+        zip = optional(object({
+          path = string
+          hash = string
+        }))
+        s3 = optional(object({
+          bucket         = string
+          key            = string
+          object_version = optional(string)
+        }))
+      }))
+      runtime                          = optional(string, "nodejs20.x")
+      timeout                          = optional(number, 10)
+      memory_size                      = optional(number, 512)
+      additional_environment_variables = optional(map(string), {})
+      additional_iam_policies = optional(list(object({
+        name   = string,
+        arn    = optional(string)
+        policy = optional(string)
+      })), [])
+      iam = optional(object({
+        path                 = optional(string)
+        permissions_boundary = optional(string)
+      }))
+      timeouts = optional(object({
+        create = optional(string)
+        update = optional(string)
+        delete = optional(string)
+      }), {})
+    })), {})
+  })
+  default = {}
+}
+
 variable "server_function" {
   description = <<EOF
 Configuration for the server function.
 
 By default, the module will create a new zip from the server function code on disk. However, you can override this by supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
 
-Possible values for backend_deployment_type: 
+Possible values for backend_deployment_type:
   - REGIONAL_LAMBDA_WITH_AUTH_LAMBDA
   - REGIONAL_LAMBDA_WITH_OAC
   - REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL
   - REGIONAL_LAMBDA
-  - EDGE_LAMBDA
+  - EDGE_LAMBDA (only supported with open next v2)
 
 See https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.4.1/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
 
@@ -179,11 +264,11 @@ If you run the server function as a lambda@edge, you should increase the deletio
 
 ```
 timeouts = {
-  deletion = "120m"
+  delete = "120m"
 }
 ```
 
-As lambda@edge doesn't support environment variables, the environment variables are injected into the source code before the zip is generated. 
+As lambda@edge doesn't support environment variables, the environment variables are injected into the source code before the zip is generated.
 **NOTE:** If the lambda function code is supplied as a zip or via an S3 reference, this code modification will not occur
 
 EOF
@@ -201,7 +286,7 @@ EOF
         object_version = optional(string)
       }))
     }))
-    enable_streaming                 = optional(bool, false)
+    enable_streaming                 = optional(bool)
     runtime                          = optional(string, "nodejs20.x")
     backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
     timeout                          = optional(number, 10)
@@ -235,6 +320,112 @@ EOF
   validation {
     condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA_WITH_OAC", "REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL", "REGIONAL_LAMBDA", "EDGE_LAMBDA"], var.server_function.backend_deployment_type)
     error_message = "The server function backend deployment type can be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA, REGIONAL_LAMBDA_WITH_OAC, REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL, REGIONAL_LAMBDA or EDGE_LAMBDA"
+  }
+}
+
+variable "additional_server_functions" {
+  description = <<EOF
+Default configutation for all additional server functions with the ability to override the configuration per function.
+
+By default, the module will create a new zip from the server function code on disk. However, you can override this by supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
+
+Possible values for backend_deployment_type: 
+  - REGIONAL_LAMBDA_WITH_AUTH_LAMBDA
+  - REGIONAL_LAMBDA_WITH_OAC
+  - REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL
+  - REGIONAL_LAMBDA
+
+See https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.4.1/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
+
+EOF
+
+  type = object({
+    enable_streaming                 = optional(bool)
+    runtime                          = optional(string, "nodejs20.x")
+    backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
+    timeout                          = optional(number, 10)
+    memory_size                      = optional(number, 1024)
+    function_architecture            = optional(string)
+    additional_environment_variables = optional(map(string), {})
+    iam_policies = optional(object({
+      include_bucket_access             = optional(bool, false)
+      include_revalidation_queue_access = optional(bool, false)
+      include_tag_mapping_db_access     = optional(bool, false)
+    }), {})
+    additional_iam_policies = optional(list(object({
+      name   = string,
+      arn    = optional(string)
+      policy = optional(string)
+    })), [])
+    vpc = optional(object({
+      security_group_ids = list(string),
+      subnet_ids         = list(string)
+    }))
+    iam = optional(object({
+      path                 = optional(string)
+      permissions_boundary = optional(string)
+    }))
+    cloudwatch_log = optional(object({
+      retention_in_days = number
+    }))
+    timeouts = optional(object({
+      create = optional(string)
+      update = optional(string)
+      delete = optional(string)
+    }), {})
+    function_overrides = optional(map(object({
+      function_code = optional(object({
+        handler = optional(string, "index.handler")
+        zip = optional(object({
+          path = string
+          hash = string
+        }))
+        s3 = optional(object({
+          bucket         = string
+          key            = string
+          object_version = optional(string)
+        }))
+      }))
+      enable_streaming                 = optional(bool)
+      runtime                          = optional(string, "nodejs20.x")
+      backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
+      timeout                          = optional(number, 10)
+      memory_size                      = optional(number, 1024)
+      function_architecture            = optional(string)
+      additional_environment_variables = optional(map(string), {})
+      iam_policies = optional(object({
+        include_bucket_access             = optional(bool, false)
+        include_revalidation_queue_access = optional(bool, false)
+        include_tag_mapping_db_access     = optional(bool, false)
+      }), {})
+      additional_iam_policies = optional(list(object({
+        name   = string,
+        arn    = optional(string)
+        policy = optional(string)
+      })), [])
+      vpc = optional(object({
+        security_group_ids = list(string),
+        subnet_ids         = list(string)
+      }))
+      iam = optional(object({
+        path                 = optional(string)
+        permissions_boundary = optional(string)
+      }))
+      cloudwatch_log = optional(object({
+        retention_in_days = number
+      }))
+      timeouts = optional(object({
+        create = optional(string)
+        update = optional(string)
+        delete = optional(string)
+      }), {})
+    })), {})
+  })
+  default = {}
+
+  validation {
+    condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA_WITH_OAC", "REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL", "REGIONAL_LAMBDA"], var.additional_server_functions.backend_deployment_type) && alltrue([for name, function_override in var.additional_server_functions.function_overrides : contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA_WITH_OAC", "REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL", "REGIONAL_LAMBDA", "EDGE_LAMBDA"], function_override.backend_deployment_type)])
+    error_message = "The backend deployment type of all additional functions must be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA, REGIONAL_LAMBDA_WITH_OAC, REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL or REGIONAL_LAMBDA"
   }
 }
 
@@ -453,7 +644,7 @@ If you run the server function as a lambda@edge, you should increase the deletio
 ```
 auth_function = {
   timeouts = {
-    deletion = "120m"
+    delete = "120m"
   }
 }
 ```
@@ -462,7 +653,6 @@ As lambda@edge doesn't support environment variables, the environment variables 
 **NOTE:** If the lambda function code is supplied as a zip or via an S3 reference, this code modification will not occur
 
 Terraform does not manage cloudwatch log groups for the auth function; the lambda service creates the log group when the function runs in each region.
-The inclusion of the variable is a mistake; this is deprecated and will be removed in the next major version of the module.
 
 CloudFront supports Origin Access Control (OAC) for lambda URLs. The possible values for the deployment options are:
 - NONE
@@ -475,8 +665,6 @@ As there is a limit on the number of cache policies associated with an AWS accou
 - CREATE
 
 If cache policy deployment is set to `USE_EXISTING`, then ID, is a required field.
-
-**NOTE:** Please use ID as ARN for the cache policy is deprecated
 
 **WARNING:** The distribution is fundamental to the architecture, and the module is optional to facilitate sharing a distribution for multi-zone deployments and to support edge cases not supported by the module. With that said, it is not recommended to supply a distribution.
 
@@ -523,9 +711,6 @@ EOF
         path                 = optional(string)
         permissions_boundary = optional(string)
       }))
-      cloudwatch_log = optional(object({
-        retention_in_days = number
-      }))
       timeouts = optional(object({
         create = optional(string)
         update = optional(string)
@@ -537,7 +722,6 @@ EOF
     }), {})
     cache_policy = optional(object({
       deployment            = optional(string, "CREATE")
-      arn                   = optional(string)
       id                    = optional(string)
       default_ttl           = optional(number, 0)
       max_ttl               = optional(number, 31536000)
@@ -707,6 +891,60 @@ variable "behaviours" {
         arn  = string
       }))
     }))
+    additional_origins = optional(map(object({
+      zone_overrides = optional(map(object({
+        paths = optional(list(string))
+      })))
+      paths = optional(list(string))
+      path_overrides = optional(map(object({
+        allowed_methods          = optional(list(string))
+        cached_methods           = optional(list(string))
+        cache_policy_id          = optional(string)
+        origin_request_policy_id = optional(string)
+        compress                 = optional(bool)
+        viewer_protocol_policy   = optional(string)
+        viewer_request = optional(object({
+          type         = string
+          arn          = string
+          include_body = optional(bool)
+        }))
+        viewer_response = optional(object({
+          type = string
+          arn  = string
+        }))
+        origin_request = optional(object({
+          arn          = string
+          include_body = bool
+        }))
+        origin_response = optional(object({
+          arn = string
+        }))
+      })))
+      allowed_methods          = optional(list(string))
+      cached_methods           = optional(list(string))
+      cache_policy_id          = optional(string)
+      origin_request_policy_id = optional(string)
+      compress                 = optional(bool)
+      viewer_protocol_policy   = optional(string)
+      viewer_request = optional(object({
+        type         = string
+        arn          = string
+        include_body = optional(bool)
+      }))
+      viewer_response = optional(object({
+        type = string
+        arn  = string
+      }))
+      origin_request = optional(object({
+        type         = string
+        arn          = string
+        include_body = optional(bool)
+      }))
+      origin_response = optional(object({
+        type = string
+        arn  = string
+      }))
+    })), {})
     image_optimisation = optional(object({
       paths = optional(list(string))
       path_overrides = optional(map(object({

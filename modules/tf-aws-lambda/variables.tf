@@ -124,6 +124,7 @@ variable "function_url" {
 variable "architecture" {
   description = "Instruction set architecture for the lambda function"
   type        = string
+  default     = "arm64"
 }
 
 variable "run_at_edge" {

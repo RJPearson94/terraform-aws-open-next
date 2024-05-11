@@ -7,17 +7,17 @@ locals {
   server_function_origin             = "server-function-origin"
 
   create_cache_policy = try(var.cache_policy.deployment, "CREATE") == "CREATE"
-  cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : try(coalesce(var.cache_policy.id, var.cache_policy.arn), null)
+  cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : try(var.cache_policy.id, null)
 
-  should_create_auth_lambda    = contains(["DETACH", "CREATE"], var.auth_function.deployment) || (var.auth_function.deployment != "USE_EXISTING" && length({ for zone in local.zones : "${zone.name}-distribution" => zone if zone.use_auth_lambda == true || zone.server_function_auth == "AUTH_LAMBDA" || zone.image_optimisation_function_auth == "AUTH_LAMBDA" }) > 0)
-  should_create_lambda_url_oac = var.lambda_url_oac.deployment == "CREATE" || length({ for zone in local.zones : "${zone.name}-distribution" => zone if zone.server_function_auth == "OAC" || zone.image_optimisation_function_auth == "OAC" }) > 0
+  should_create_auth_lambda    = contains(["DETACH", "CREATE"], var.auth_function.deployment) || (var.auth_function.deployment != "USE_EXISTING" && length({ for zone in local.zones : "${zone.name}-distribution" => zone if anytrue([for origin in zone.origins : origin.auth == "AUTH_LAMBDA"]) }) > 0)
+  should_create_lambda_url_oac = var.lambda_url_oac.deployment == "CREATE" || length({ for zone in local.zones : "${zone.name}-distribution" => zone if anytrue([for origin in zone.origins : origin.auth == "OAC"]) }) > 0
   auth_lambda_qualified_arn    = var.auth_function.deployment == "USE_EXISTING" ? var.auth_function.qualified_arn : local.should_create_auth_lambda ? one(module.auth_function[*].qualified_arn) : null
 
-  custom_error_responses = [for custom_error_response in var.custom_error_responses : merge(custom_error_response, { path_pattern = "/${custom_error_response.response_page.behaviour}/*" }) if custom_error_response.response_page != null]
+  custom_error_responses        = [for custom_error_response in var.custom_error_responses : merge(custom_error_response, { path_pattern = "/${custom_error_response.response_page.behaviour}/*" }) if custom_error_response.response_page != null]
   includes_staging_distribution = var.continuous_deployment.use && var.continuous_deployment.deployment != "NONE"
 
   # Force the root zone to the bottom of the behaviours
-  zones      = concat([for zone in var.zones : zone if zone.root == false], [for zone in var.zones : zone if zone.root == true])
+  zones      = concat([for zone in var.zones : merge(zone, { path_prefix = "/${coalesce(zone.path, zone.name)}" }) if zone.root == false], [for zone in var.zones : merge(zone, { path_prefix = zone.path != null ? "/${zone.path}" : "" }) if zone.root == true])
   root_zones = [for zone in local.zones : zone if zone.root == true][0]
 
   ordered_cache_behaviors = concat(
@@ -49,7 +49,7 @@ locals {
     ],
     flatten([
       for zone in local.zones : concat(
-        [for index, static_assets_behaviour in formatlist("%s%s", zone.root == true ? zone.path != null ? "/${zone.path}" : "" : "/${coalesce(zone.path, zone.name)}", coalesce(try(var.behaviours.static_assets.zone_overrides[zone.name].paths, null), try(var.behaviours.static_assets.paths, null), concat(["/_next/static/*"], coalesce(try(var.behaviours.static_assets.zone_overrides[zone.name].additional_paths, null), try(var.behaviours.static_assets.additional_paths, null), [])))) : {
+        [for index, static_assets_behaviour in [for path in coalesce(try(var.behaviours.static_assets.zone_overrides[zone.name].paths, null), try(var.behaviours.static_assets.paths, null), concat(["/_next/static/*"], coalesce(try(var.behaviours.static_assets.zone_overrides[zone.name].additional_paths, null), try(var.behaviours.static_assets.additional_paths, null), []))) : startswith(path, zone.path_prefix) ? path : format("%s%s", zone.path_prefix, path)] : {
           path_pattern     = static_assets_behaviour
           allowed_methods  = coalesce(try(var.behaviours.static_assets.path_overrides[static_assets_behaviour].allowed_methods, null), try(var.behaviours.static_assets.allowed_methods, null), ["GET", "HEAD", "OPTIONS"])
           cached_methods   = coalesce(try(var.behaviours.static_assets.path_overrides[static_assets_behaviour].cached_methods, null), try(var.behaviours.static_assets.cached_methods, null), ["GET", "HEAD", "OPTIONS"])
@@ -74,7 +74,7 @@ locals {
           ]
           }
         ],
-        [for index, image_optimisation_behaviour in zone.image_optimisation_domain_name == null ? [] : formatlist("%s%s", zone.root == true ? zone.path != null ? "/${zone.path}" : "" : "/${coalesce(zone.path, zone.name)}", coalesce(try(var.behaviours.image_optimisation.zone_overrides[zone.name].paths, null), try(var.behaviours.image_optimisation.paths, null), ["/_next/image"])) : {
+        [for index, image_optimisation_behaviour in lookup(zone.origins, "image_optimisation", null) == null ? [] : [for path in coalesce(try(var.behaviours.image_optimisation.zone_overrides[zone.name].paths, null), try(var.behaviours.image_optimisation.paths, null), ["/_next/image"]) : startswith(path, zone.path_prefix) ? path : format("%s%s", zone.path_prefix, path)] : {
           path_pattern     = image_optimisation_behaviour
           allowed_methods  = coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].allowed_methods, null), try(var.behaviours.image_optimisation.allowed_methods, null), ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"])
           cached_methods   = coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].cached_methods, null), try(var.behaviours.image_optimisation.cached_methods, null), ["GET", "HEAD", "OPTIONS"])
@@ -94,15 +94,40 @@ locals {
           lambda_function_associations = [
             merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].viewer_request, null), try(var.behaviours.image_optimisation.viewer_request, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-request" }),
             merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].viewer_response, null), try(var.behaviours.image_optimisation.viewer_response, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-response" }),
-            merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].origin_request, null), try(var.behaviours.image_optimisation.origin_request, null), { arn = zone.use_auth_lambda || zone.server_function_auth == "AUTH_LAMBDA" ? local.auth_lambda_qualified_arn : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
+            merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].origin_request, null), try(var.behaviours.image_optimisation.origin_request, null), { arn = zone.origins["image_optimisation"].auth == "AUTH_LAMBDA" ? local.auth_lambda_qualified_arn : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
             merge(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour].origin_response, null), try(var.behaviours.image_optimisation.origin_response, null), { arn = null }), { type = "LAMBDA@EDGE", event_type = "origin-response" }),
           ]
         }],
-        [for index, server_behaviour in formatlist("%s%s", zone.root == true ? zone.path != null ? "/${zone.path}" : "" : "/${coalesce(zone.path, zone.name)}", coalesce(try(var.behaviours.server.zone_overrides[zone.name].paths, null), try(var.behaviours.server.paths, null), ["/_next/data/*", "/api/*", "*"])) : {
+        flatten([for name, origin in var.behaviours.additional_origins : [for index, additional_origin_behaviour in [for path in try(coalesce(try(origin.zone_overrides[zone.name].paths, null), origin.paths), []) : startswith(path, zone.path_prefix) ? path : format("%s%s", zone.path_prefix, path)] : {
+          path_pattern     = additional_origin_behaviour
+          allowed_methods  = coalesce(try(origin.path_overrides[additional_origin_behaviour].allowed_methods, null), try(origin.allowed_methods, null), ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"])
+          cached_methods   = coalesce(try(origin.path_overrides[additional_origin_behaviour].cached_methods, null), try(origin.cached_methods, null), ["GET", "HEAD", "OPTIONS"])
+          target_origin_id = lookup(zone.origins, name, null) == null ? join("-", compact([zone.name, local.s3_origin_id])) : join("-", compact([zone.name, "${name}-function"]))
+
+          cache_policy_id          = coalesce(try(origin.path_overrides[additional_origin_behaviour].cache_policy_id, null), try(origin.cache_policy_id, null), local.cache_policy_id)
+          origin_request_policy_id = coalesce(try(origin.path_overrides[additional_origin_behaviour].origin_request_policy_id, null), try(origin.origin_request_policy_id, null), data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id)
+
+          compress               = coalesce(try(origin.path_overrides[additional_origin_behaviour].compress, null), try(origin.compress, null), true)
+          viewer_protocol_policy = coalesce(try(origin.path_overrides[additional_origin_behaviour].viewer_protocol_policy, null), try(origin.viewer_protocol_policy, null), "redirect-to-https")
+
+          function_associations = [
+            merge(coalesce(try(origin.path_overrides[additional_origin_behaviour].viewer_request, null), try(origin.viewer_request, null), { type = "CLOUDFRONT_FUNCTION", arn = aws_cloudfront_function.x_forwarded_host.arn }), { event_type = "viewer-request" }),
+            merge(coalesce(try(origin.path_overrides[additional_origin_behaviour].viewer_response, null), try(origin.viewer_response, null), { type = "CLOUDFRONT_FUNCTION", arn = null }), { event_type = "viewer-response" }),
+          ]
+
+          lambda_function_associations = [
+            merge(coalesce(try(origin.path_overrides[additional_origin_behaviour].viewer_request, null), try(origin.viewer_request, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-request" }),
+            merge(coalesce(try(origin.path_overrides[additional_origin_behaviour].viewer_response, null), try(origin.viewer_response, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-response" }),
+            merge(coalesce(try(origin.path_overrides[additional_origin_behaviour].origin_request, null), try(origin.origin_request, null), { arn = zone.origins[name].auth == "AUTH_LAMBDA" ? local.auth_lambda_qualified_arn : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
+            merge(coalesce(try(origin.path_overrides[additional_origin_behaviour].origin_response, null), try(origin.origin_response, null), { arn = null }), { type = "LAMBDA@EDGE", event_type = "origin-response" }),
+          ]
+          }]
+        ]),
+        [for index, server_behaviour in [for path in coalesce(try(var.behaviours.server.zone_overrides[zone.name].paths, null), try(var.behaviours.server.paths, null), ["/_next/data/*", "/api/*", "*"]) : startswith(path, zone.path_prefix) ? path : format("%s%s", zone.path_prefix, path)] : {
           path_pattern     = server_behaviour
           allowed_methods  = coalesce(try(var.behaviours.server.path_overrides[server_behaviour].allowed_methods, null), try(var.behaviours.server.allowed_methods, null), ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"])
           cached_methods   = coalesce(try(var.behaviours.server.path_overrides[server_behaviour].cached_methods, null), try(var.behaviours.server.cached_methods, null), ["GET", "HEAD", "OPTIONS"])
-          target_origin_id = zone.server_at_edge ? join("-", compact([zone.name, local.s3_origin_id])) : join("-", compact([zone.name, local.server_function_origin]))
+          target_origin_id = lookup(zone.origins, "server", null) == null ? join("-", compact([zone.name, local.s3_origin_id])) : join("-", compact([zone.name, local.server_function_origin]))
 
           cache_policy_id          = coalesce(try(var.behaviours.server.path_overrides[server_behaviour].cache_policy_id, null), try(var.behaviours.server.cache_policy_id, null), local.cache_policy_id)
           origin_request_policy_id = coalesce(try(var.behaviours.server.path_overrides[server_behaviour].origin_request_policy_id, null), try(var.behaviours.server.origin_request_policy_id, null), data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id)
@@ -118,7 +143,7 @@ locals {
           lambda_function_associations = [
             merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].viewer_request, null), try(var.behaviours.server.viewer_request, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-request" }),
             merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].viewer_response, null), try(var.behaviours.server.viewer_response, null), { type = "LAMBDA@EDGE", arn = null }), { event_type = "viewer-response" }),
-            merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].origin_request, null), try(var.behaviours.server.origin_request, null), { arn = zone.server_at_edge ? zone.server_function_arn : zone.use_auth_lambda || zone.image_optimisation_function_auth == "AUTH_LAMBDA" ? local.auth_lambda_qualified_arn : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
+            merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].origin_request, null), try(var.behaviours.server.origin_request, null), { arn = try(zone.origins["server"].auth, null) == "AUTH_LAMBDA" ? local.auth_lambda_qualified_arn : null, include_body = true }), { type = "LAMBDA@EDGE", event_type = "origin-request" }),
             merge(coalesce(try(var.behaviours.server.path_overrides[server_behaviour].origin_response, null), try(var.behaviours.server.origin_response, null), { arn = null }), { type = "LAMBDA@EDGE", event_type = "origin-response" }),
           ]
         }]
@@ -139,29 +164,29 @@ locals {
     ],
     flatten([
       for zone in local.zones : concat([{
-        domain_name              = zone.bucket_domain_name
+        domain_name              = zone.origins["static_assets"].domain_name
         origin_access_control_id = aws_cloudfront_origin_access_control.website_origin_access_control.id
         origin_id                = join("-", compact([zone.name, local.s3_origin_id]))
-        origin_path              = zone.bucket_origin_path
+        origin_path              = zone.origins["static_assets"].path
         origin_headers           = null
         custom_origin_config     = null
         }],
-        zone.server_at_edge ? [] : [{
-          domain_name              = zone.server_domain_name
-          origin_access_control_id = zone.server_function_auth == "OAC" ? one(aws_cloudfront_origin_access_control.lambda_url_origin_access_control[*].id) : null
-          origin_id                = join("-", compact([zone.name, local.server_function_origin]))
-          origin_path              = null
-          origin_headers           = zone.server_origin_headers
+        [for name, origin in zone.origins : {
+          domain_name              = origin.domain_name
+          origin_access_control_id = origin.auth == "OAC" ? one(aws_cloudfront_origin_access_control.lambda_url_origin_access_control[*].id) : null
+          origin_id                = join("-", compact([zone.name, name == "server" ? local.server_function_origin : "${name}-function"]))
+          origin_path              = origin.path
+          origin_headers           = origin.headers
           custom_origin_config = {
             http_port              = 80
             https_port             = 443
             origin_protocol_policy = "https-only"
             origin_ssl_protocols   = ["TLSv1.2"]
           }
-        }],
-        zone.image_optimisation_domain_name == null ? [] : [{
-          domain_name              = zone.image_optimisation_domain_name
-          origin_access_control_id = zone.image_optimisation_function_auth == "OAC" ? one(aws_cloudfront_origin_access_control.lambda_url_origin_access_control[*].id) : null
+        } if contains(["static_assets", "image_optimisation"], name) == false],
+        lookup(zone.origins, "image_optimisation", null) == null ? [] : [{
+          domain_name              = zone.origins["image_optimisation"].domain_name
+          origin_access_control_id = zone.origins["image_optimisation"].auth == "OAC" ? one(aws_cloudfront_origin_access_control.lambda_url_origin_access_control[*].id) : null
           origin_id                = join("-", compact([zone.name, local.image_optimisation_function_origin]))
           origin_path              = null
           origin_headers           = null
@@ -348,7 +373,11 @@ module "auth_function" {
       "Action" : [
         "lambda:InvokeFunctionUrl"
       ],
-      "Resource" : flatten([for zone in local.zones : [zone.server_function_arn, "${zone.server_function_arn}:*"] if zone.use_auth_lambda == true && zone.server_function_arn != null]),
+      "Resource" : flatten([
+        for zone in local.zones : concat([
+          for origin_name, origin in zone.origins : [origin.arn, "${origin.arn}:*"] if origin.auth == "AUTH_LAMBDA" && origin.arn != null
+        ])
+      ]),
       "Effect" : "Allow"
     }
   ]
