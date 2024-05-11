@@ -29,7 +29,7 @@ See https://github.com/RJPearson94/terraform-aws-open-next/tree/v2.4.1?tab=readm
 
 EOF
 
-  type        = string
+  type = string
 
   validation {
     condition     = contains(["INDEPENDENT_ZONES", "SHARED_DISTRIBUTION", "SHARED_DISTRIBUTION_AND_BUCKET"], var.deployment)
@@ -471,7 +471,7 @@ EOF
 }
 
 variable "revalidation_function" {
-  description =<<EOF
+  description = <<EOF
 Configuration for the revalidation function.
 
 By default, the module will create a new zip from the revalidation function code on disk. However, you can override this by supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.

@@ -111,8 +111,8 @@ locals {
     additional_origins = { for name, additional_server_function in local.additional_server_functions : name => merge(coalesce(local.user_supplied_behaviours.additional_origins, { paths = null, path_overrides = null, allowed_methods = null, cached_methods = null, cache_policy_id = null, origin_request_policy_id = null, compress = null, viewer_protocol_policy = null, viewer_request = null, viewer_response = null, origin_request = null, origin_response = null, origin_reference = null }), {
       paths            = try(coalesce(try(local.user_supplied_behaviours.additional_origins[name].paths, null), local.open_next_versions.v2 ? null : [for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" if behavior.origin == name]), null)
       origin_reference = coalesce(try(local.user_supplied_behaviours.additional_origins[name].origin_reference, null), name)
-      origin_request = try(local.user_supplied_behaviours.additional_origins[name].origin_request, null)
-      path_overrides = merge(try(local.user_supplied_behaviours.additional_origins[name].path_overrides, {}), { for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" => { origin_request = { arn = module.edge_function[behavior["edgeFunction"]].qualified_arn, include_body = true } } if behavior.origin == name && lookup(behavior, "edgeFunction", null) != null })
+      origin_request   = try(local.user_supplied_behaviours.additional_origins[name].origin_request, null)
+      path_overrides   = merge(try(local.user_supplied_behaviours.additional_origins[name].path_overrides, {}), { for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" => { origin_request = { arn = module.edge_function[behavior["edgeFunction"]].qualified_arn, include_body = true } } if behavior.origin == name && lookup(behavior, "edgeFunction", null) != null })
     }) }
   })
 
@@ -372,7 +372,7 @@ resource "local_file" "lambda_at_edge_modifications" {
   content  = "process.env = { ...process.env, ...${jsonencode(local.server_function_env_variables)} };\r\n${file("${local.open_next_default_server}/index.mjs")}"
   filename = "${local.open_next_default_server}/index.mjs"
 
-   lifecycle {
+  lifecycle {
     precondition {
       condition     = local.open_next_versions.v2 == true
       error_message = "EDGE_LAMBDA backend deployment type is only supported with open next v2"
