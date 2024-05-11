@@ -1,4 +1,4 @@
- variable "prefix" {
+variable "prefix" {
   description = "A prefix which will be attached to the resource name to ensure resources are random"
   type        = string
   default     = null
@@ -249,12 +249,12 @@ Configuration for the server function.
 
 By default, the module will create a new zip from the server function code on disk. However, you can override this by supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
 
-Possible values for backend_deployment_type: 
+Possible values for backend_deployment_type:
   - REGIONAL_LAMBDA_WITH_AUTH_LAMBDA
   - REGIONAL_LAMBDA_WITH_OAC
   - REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL
   - REGIONAL_LAMBDA
-  - EDGE_LAMBDA
+  - EDGE_LAMBDA (only supported with open next v2)
 
 See https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.4.1/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
 
@@ -268,7 +268,7 @@ timeouts = {
 }
 ```
 
-As lambda@edge doesn't support environment variables, the environment variables are injected into the source code before the zip is generated. 
+As lambda@edge doesn't support environment variables, the environment variables are injected into the source code before the zip is generated.
 **NOTE:** If the lambda function code is supplied as a zip or via an S3 reference, this code modification will not occur
 
 EOF
@@ -334,22 +334,8 @@ Possible values for backend_deployment_type:
   - REGIONAL_LAMBDA_WITH_OAC
   - REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL
   - REGIONAL_LAMBDA
-  - EDGE_LAMBDA
 
 See https://github.com/RJPearson94/terraform-aws-open-next/blob/v2.4.1/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
-
-**NOTE:** When backend_deployment_type is set to EDGE_LAMBDA, Terraform does not manage cloudwatch log groups; instead, the lambda service creates the log group when the function runs in each region.
-
-If you run the server function as a lambda@edge, you should increase the deletion timeout to 2 hours `120m`. As the lambda service needs to wait for the replicas to be removed, this often exceeds the default 10-minute deletion timeout. This extended timeout allows Terraform to poll for longer and should help mitigate Terraform failures; an example Terraform configuration can be seen below.
-
-```
-timeouts = {
-  delete = "120m"
-}
-```
-
-As lambda@edge doesn't support environment variables, the environment variables are injected into the source code before the zip is generated. 
-**NOTE:** If the lambda function code is supplied as a zip or via an S3 reference, this code modification will not occur
 
 EOF
 
@@ -438,8 +424,8 @@ EOF
   default = {}
 
   validation {
-    condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA_WITH_OAC", "REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL", "REGIONAL_LAMBDA", "EDGE_LAMBDA"], var.additional_server_functions.backend_deployment_type) && alltrue([ for name, function_override in var.additional_server_functions.function_overrides : contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA_WITH_OAC", "REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL", "REGIONAL_LAMBDA", "EDGE_LAMBDA"], function_override.backend_deployment_type)])
-    error_message = "The backend deployment type of all additional functions must be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA, REGIONAL_LAMBDA_WITH_OAC, REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL, REGIONAL_LAMBDA or EDGE_LAMBDA"
+    condition     = contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA_WITH_OAC", "REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL", "REGIONAL_LAMBDA"], var.additional_server_functions.backend_deployment_type) && alltrue([for name, function_override in var.additional_server_functions.function_overrides : contains(["REGIONAL_LAMBDA_WITH_AUTH_LAMBDA", "REGIONAL_LAMBDA_WITH_OAC", "REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL", "REGIONAL_LAMBDA", "EDGE_LAMBDA"], function_override.backend_deployment_type)])
+    error_message = "The backend deployment type of all additional functions must be one of REGIONAL_LAMBDA_WITH_AUTH_LAMBDA, REGIONAL_LAMBDA_WITH_OAC, REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL or REGIONAL_LAMBDA"
   }
 }
 

@@ -111,10 +111,7 @@ locals {
     additional_origins = { for name, additional_server_function in local.additional_server_functions : name => merge(coalesce(local.user_supplied_behaviours.additional_origins, { paths = null, path_overrides = null, allowed_methods = null, cached_methods = null, cache_policy_id = null, origin_request_policy_id = null, compress = null, viewer_protocol_policy = null, viewer_request = null, viewer_response = null, origin_request = null, origin_response = null, origin_reference = null }), {
       paths            = try(coalesce(try(local.user_supplied_behaviours.additional_origins[name].paths, null), local.open_next_versions.v2 ? null : [for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" if behavior.origin == name]), null)
       origin_reference = coalesce(try(local.user_supplied_behaviours.additional_origins[name].origin_reference, null), name)
-      origin_request = try(coalesce(try(local.user_supplied_behaviours.additional_origins[name].origin_request, null), try(local.user_supplied_behaviours.additional_origins[name].backend_deployment_type, var.additional_server_functions.backend_deployment_type) == "EDGE_LAMBDA" ? {
-        arn          = module.additional_server_function[name].qualified_arn
-        include_body = true
-      } : null), null)
+      origin_request = try(local.user_supplied_behaviours.additional_origins[name].origin_request, null)
       path_overrides = merge(try(local.user_supplied_behaviours.additional_origins[name].path_overrides, {}), { for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" => { origin_request = { arn = module.edge_function[behavior["edgeFunction"]].qualified_arn, include_body = true } } if behavior.origin == name && lookup(behavior, "edgeFunction", null) != null })
     }) }
   })
@@ -374,6 +371,13 @@ resource "local_file" "lambda_at_edge_modifications" {
 
   content  = "process.env = { ...process.env, ...${jsonencode(local.server_function_env_variables)} };\r\n${file("${local.open_next_default_server}/index.mjs")}"
   filename = "${local.open_next_default_server}/index.mjs"
+
+   lifecycle {
+    precondition {
+      condition     = local.open_next_versions.v2 == true
+      error_message = "EDGE_LAMBDA backend deployment type is only supported with open next v2"
+    }
+  }
 }
 
 module "server_function" {
@@ -446,14 +450,6 @@ resource "aws_lambda_permission" "server_function_url_permission" {
   function_url_auth_type = "AWS_IAM"
 }
 
-# As lambda@edge does not support environment variables, the module will injected them at the top of the server code prior to the code being uploaded to AWS, credit to SST for the inspiration behind this. https://github.com/sst/sst/blob/3b792053d90c49d9ca693308646a3389babe9ceb/packages/sst/src/constructs/EdgeFunction.ts#L193
-resource "local_file" "additional_server_function_modifications" {
-  for_each = { for name, additional_server_function in local.additional_server_functions : name => additional_server_function if try(var.additional_server_functions.function_overrides[name].function_code.zip, null) == null && try(var.additional_server_functions.function_overrides[name].function_code.s3, null) == null && try(var.additional_server_functions.function_overrides[name].backend_deployment_type, var.additional_server_functions.backend_deployment_type) == "EDGE_LAMBDA" }
-
-  content  = "process.env = { ...process.env, ...${jsonencode(local.server_function_env_variables)} };\r\n${file("${local.open_next_default_server}/index.mjs")}"
-  filename = "${local.open_next_default_server}/index.mjs"
-}
-
 module "additional_server_function" {
   for_each = local.additional_server_functions
   source   = "../tf-aws-lambda"
@@ -502,10 +498,8 @@ module "additional_server_function" {
     alias_to_update = local.staging_alias
   }
 
-  run_at_edge = try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type) == "EDGE_LAMBDA"
-
   function_url = {
-    create              = try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type) != "EDGE_LAMBDA"
+    create              = true
     authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], lookup(local.auth_options, try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type), null)), false) ? "AWS_IAM" : "NONE"
     allow_any_principal = try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type) != "REGIONAL_LAMBDA_WITH_OAC"
     enable_streaming    = coalesce(try(var.additional_server_functions.function_overrides[each.key].enable_streaming, var.additional_server_functions.enable_streaming, null), try(each.value.streaming, null), false)

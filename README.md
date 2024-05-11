@@ -68,11 +68,14 @@ When upgrading to v2 of the module, it is recommended that you redeploy your app
 
 Where possible, the module has been made backwards compatible with 2.x.
 
-Deprecated fields have been removed. If you use one of the following values, you will need to modify your Terraform/ Terragrunt configuration 
+For open next v3, the module will read the `open-next.output.json` file in the .open-next directory to determine the edge and server functions that need to be configured, with any default configuration i.e streaming that needs to be configured.
 
+**NOTE:** Deprecated fields have been removed. If you use one of the following values, you will need to modify your Terraform/ Terragrunt configuration 
+
+- `EDGE_LAMBDA` backend deployment type is no longer supported for server function, in open next v3 this has been moved into edge functions instead [BREAKING CHANGE]
+- `aws_lambda_permission.server_function_url_permission` and `aws_lambda_permission.image_optimisation_function_url_permission` have been merged into a list of `aws_lambda_permission.function_url_permission` resources in the `tf-aws-open-next-multi-zone` module. You can either let the resources re-create or update the references using either [move config](https://developer.hashicorp.com/terraform/tutorials/configuration-language/move-config), [import block](https://developer.hashicorp.com/terraform/language/import) or [import command](https://developer.hashicorp.com/terraform/cli/commands/import) [BREAKING CHANGE]
 - CloudFront cache policy ARN - you must now set the CloudFront Cache Policy ID
 - Auth function cloudfront log group - this configuration had no affect so has been removed
-- `aws_lambda_permission.server_function_url_permission` and `aws_lambda_permission.image_optimisation_function_url_permission` have been merged into a list of `aws_lambda_permission.function_url_permission` resources in the `tf-aws-open-next-multi-zone` module. You can either let the resources re-create or update the references using either [move config](https://developer.hashicorp.com/terraform/tutorials/configuration-language/move-config), [import block](https://developer.hashicorp.com/terraform/language/import) or [import command](https://developer.hashicorp.com/terraform/cli/commands/import) [BREAKING CHANGE]
 
 If you are still using open next v2.x, you can set the `open_next_version` variable to `v2.x.x` (the default value). If you upgrade to Open Next v3.x, please set the `open_next_version` variable to `v3.x.x`.
 

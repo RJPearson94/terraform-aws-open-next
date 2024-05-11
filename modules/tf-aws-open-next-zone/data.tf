@@ -16,8 +16,6 @@ data "archive_file" "additional_server_function" {
   type        = "zip"
   output_path = "${local.open_next_path_without_folder}/${each.value.bundle}.zip"
   source_dir  = "${local.open_next_path_without_folder}/${each.value.bundle}"
-
-  depends_on = [local_file.additional_server_function_modifications]
 }
 
 data "archive_file" "edge_function" {
