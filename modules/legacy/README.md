@@ -1,5 +1,7 @@
 # Open Next Terraform - Legacy
 
+**WARNING:** This module is deprecated and will be removed in v4 of this module
+
 This module deploys a next.js website using [Open Next](https://github.com/serverless-stack/open-next) to AWS utilising lambda, S3 and CloudFront.
 
 This module will build the corresponding resources to host the single-zone or multi-zone website; several options exist to deploy the backend. The options are:
