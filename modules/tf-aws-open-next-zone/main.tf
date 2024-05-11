@@ -522,7 +522,7 @@ resource "aws_lambda_permission" "additional_server_function_url_permission" {
   ]...)
 
   action                 = "lambda:InvokeFunctionUrl"
-  function_name          = module.server_function[each.value.name].name
+  function_name          = module.additional_server_function[each.value.name].name
   principal              = "cloudfront.amazonaws.com"
   source_arn             = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
   qualifier              = each.value.alias
