@@ -39,6 +39,8 @@ locals {
   production_alias = var.aliases != null ? var.aliases.production : one(module.open_next_aliases[*].alias_details.production)
   aliases          = var.aliases != null ? distinct(values(var.aliases)) : one(module.open_next_aliases[*].alias_details.aliases)
 
+  edge_function_env_variables = { "OPEN_NEXT_ORIGIN" = jsonencode(merge({ for name, details in local.additional_server_functions : name => { "host" : lookup(module.additional_server_function[name].url_hostnames, local.staging_alias, null), "protocol" : "https", "port" : 443 } }, { "default" = { "host" : lookup(module.server_function.url_hostnames, local.staging_alias, null), "protocol" : "https", "port" : 443 } })) }
+
   prefix = var.prefix == null ? "" : "${var.prefix}-"
   suffix = var.suffix == null ? "" : "-${var.suffix}"
 
@@ -116,6 +118,7 @@ locals {
     }) }
   })
 
+  // This is still needed for open next v2 support
   server_at_edge = var.server_function.backend_deployment_type == "EDGE_LAMBDA"
 
   cache_bucket_env_variables = {
@@ -324,7 +327,7 @@ module "s3_assets" {
 resource "local_file" "edge_functions_modifications" {
   for_each = { for name, edge_function in local.edge_functions : name => edge_function if try(var.edge_functions.function_overrides[name].function_code.zip, null) == null && try(var.edge_functions.function_overrides[name].function_code.s3, null) == null }
 
-  content  = "process.env = { ...process.env, ...${jsonencode(try(coalesce(try(var.edge_functions.function_overrides[each.key].additional_environment_variables, null), var.edge_functions.additional_environment_variables), {}))} };\r\n${file("${local.open_next_path_without_folder}/${each.value.bundle}/handler.mjs")}"
+  content  = "process.env = { ...process.env, ...${jsonencode(merge(try(coalesce(try(var.edge_functions.function_overrides[each.key].include_open_next_origin_env_variable, null), var.edge_functions.include_open_next_origin_env_variable), true) == true ? local.edge_function_env_variables : {}, try(coalesce(try(var.edge_functions.function_overrides[each.key].additional_environment_variables, null), var.edge_functions.additional_environment_variables), {})))} };\r\n${file("${local.open_next_path_without_folder}/${each.value.bundle}/handler.mjs")}"
   filename = "${local.open_next_path_without_folder}/${each.value.bundle}/handler.mjs"
 }
 
@@ -626,7 +629,11 @@ module "image_optimisation_function" {
   environment_variables = merge({
     "BUCKET_NAME"       = local.website_bucket_name,
     "BUCKET_KEY_PREFIX" = module.s3_assets.asset_key_prefix
-  }, var.image_optimisation_function.additional_environment_variables)
+    },
+    try(var.image_optimisation_function.static_image_optimisation, false) == true ? {
+      "OPENNEXT_STATIC_ETAG" = "true"
+    } : {},
+  var.image_optimisation_function.additional_environment_variables)
 
   additional_iam_policies = var.image_optimisation_function.additional_iam_policies
   iam_policy_statements = [

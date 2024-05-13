@@ -171,9 +171,15 @@ EOF
 
 variable "edge_functions" {
   description = <<EOF
+Default configutation for all edge functions with the ability to override the configuration per edge function
+
 By default, the module will create a new zip from the edge function code on disk. However, you can override this by supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
 
+This feature requires open next v3.
+
 **NOTE:** Terraform does not manage cloudwatch log groups; instead, the lambda service creates the log group when the function runs in each region.
+
+The module `OPEN_NEXT_ORIGIN` environment variable for each edge function, as per the [open next documentation for middleware](https://open-next.js.org/inner_workings/components/middleware#special-overrides). You have the ability to remove this environment variable by setting the `include_open_next_origin_env_variable` to `false` or override this value by setting an environment variable with the same name via the `additional_environment_variables` attribute.
 
 You should increase the deletion timeout to 2 hours `120m`. As the lambda service needs to wait for the replicas to be removed, this often exceeds the default 10-minute deletion timeout. This extended timeout allows Terraform to poll for longer and should help mitigate Terraform failures; an example Terraform configuration can be seen below.
 
@@ -189,10 +195,11 @@ As lambda@edge doesn't support environment variables, the environment variables 
 EOF
 
   type = object({
-    runtime                          = optional(string, "nodejs20.x")
-    timeout                          = optional(number, 10)
-    memory_size                      = optional(number, 512)
-    additional_environment_variables = optional(map(string), {})
+    runtime                               = optional(string, "nodejs20.x")
+    timeout                               = optional(number, 10)
+    memory_size                           = optional(number, 512)
+    include_open_next_origin_env_variable = optional(bool, true)
+    additional_environment_variables      = optional(map(string), {})
     additional_iam_policies = optional(list(object({
       name   = string,
       arn    = optional(string)
@@ -220,10 +227,11 @@ EOF
           object_version = optional(string)
         }))
       }))
-      runtime                          = optional(string, "nodejs20.x")
-      timeout                          = optional(number, 10)
-      memory_size                      = optional(number, 512)
-      additional_environment_variables = optional(map(string), {})
+      runtime                               = optional(string, "nodejs20.x")
+      timeout                               = optional(number, 10)
+      memory_size                           = optional(number, 512)
+      include_open_next_origin_env_variable = optional(bool, true)
+      additional_environment_variables      = optional(map(string), {})
       additional_iam_policies = optional(list(object({
         name   = string,
         arn    = optional(string)
@@ -326,6 +334,8 @@ EOF
 variable "additional_server_functions" {
   description = <<EOF
 Default configutation for all additional server functions with the ability to override the configuration per function.
+
+This feature requires open next v3.
 
 By default, the module will create a new zip from the server function code on disk. However, you can override this by supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
 
@@ -467,6 +477,7 @@ EOF
     memory_size                      = optional(number, 1536)
     additional_environment_variables = optional(map(string), {})
     function_architecture            = optional(string)
+    static_image_optimisation        = optional(bool, false)
     additional_iam_policies = optional(list(object({
       name   = string,
       arn    = optional(string)
