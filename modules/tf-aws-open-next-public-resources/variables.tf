@@ -231,6 +231,53 @@ variable "behaviours" {
       zone_overrides = optional(map(object({
         paths            = optional(list(string))
         additional_paths = optional(list(string))
+        path_overrides = optional(map(object({
+          allowed_methods          = optional(list(string))
+          cached_methods           = optional(list(string))
+          cache_policy_id          = optional(string)
+          origin_request_policy_id = optional(string)
+          compress                 = optional(bool)
+          viewer_protocol_policy   = optional(string)
+          viewer_request = optional(object({
+            type         = string
+            arn          = string
+            include_body = optional(bool)
+          }))
+          viewer_response = optional(object({
+            type = string
+            arn  = string
+          }))
+          origin_request = optional(object({
+            arn          = string
+            include_body = bool
+          }))
+          origin_response = optional(object({
+            arn = string
+          }))
+        })))
+        allowed_methods          = optional(list(string))
+        cached_methods           = optional(list(string))
+        cache_policy_id          = optional(string)
+        origin_request_policy_id = optional(string)
+        compress                 = optional(bool)
+        viewer_protocol_policy   = optional(string)
+        viewer_request = optional(object({
+          type         = string
+          arn          = string
+          include_body = optional(bool)
+        }))
+        viewer_response = optional(object({
+          type = string
+          arn  = string
+        }))
+        origin_request = optional(object({
+          arn          = string
+          include_body = optional(bool)
+        }))
+        origin_response = optional(object({
+          type = string
+          arn  = string
+        }))
       })))
       paths            = optional(list(string))
       additional_paths = optional(list(string))
@@ -285,6 +332,53 @@ variable "behaviours" {
     server = optional(object({
       zone_overrides = optional(map(object({
         paths = optional(list(string))
+        path_overrides = optional(map(object({
+          allowed_methods          = optional(list(string))
+          cached_methods           = optional(list(string))
+          cache_policy_id          = optional(string)
+          origin_request_policy_id = optional(string)
+          compress                 = optional(bool)
+          viewer_protocol_policy   = optional(string)
+          viewer_request = optional(object({
+            type         = string
+            arn          = string
+            include_body = optional(bool)
+          }))
+          viewer_response = optional(object({
+            type = string
+            arn  = string
+          }))
+          origin_request = optional(object({
+            arn          = string
+            include_body = bool
+          }))
+          origin_response = optional(object({
+            arn = string
+          }))
+        })))
+        allowed_methods          = optional(list(string))
+        cached_methods           = optional(list(string))
+        cache_policy_id          = optional(string)
+        origin_request_policy_id = optional(string)
+        compress                 = optional(bool)
+        viewer_protocol_policy   = optional(string)
+        viewer_request = optional(object({
+          type         = string
+          arn          = string
+          include_body = optional(bool)
+        }))
+        viewer_response = optional(object({
+          type = string
+          arn  = string
+        }))
+        origin_request = optional(object({
+          arn          = string
+          include_body = optional(bool)
+        }))
+        origin_response = optional(object({
+          type = string
+          arn  = string
+        }))
       })))
       paths = optional(list(string))
       path_overrides = optional(map(object({
@@ -336,9 +430,6 @@ variable "behaviours" {
       }))
     }))
     additional_origins = optional(map(object({
-      zone_overrides = optional(map(object({
-        paths = optional(list(string))
-      })))
       paths = optional(list(string))
       path_overrides = optional(map(object({
         allowed_methods          = optional(list(string))
@@ -391,6 +482,53 @@ variable "behaviours" {
     image_optimisation = optional(object({
       zone_overrides = optional(map(object({
         paths = optional(list(string))
+        path_overrides = optional(map(object({
+          allowed_methods          = optional(list(string))
+          cached_methods           = optional(list(string))
+          cache_policy_id          = optional(string)
+          origin_request_policy_id = optional(string)
+          compress                 = optional(bool)
+          viewer_protocol_policy   = optional(string)
+          viewer_request = optional(object({
+            type         = string
+            arn          = string
+            include_body = optional(bool)
+          }))
+          viewer_response = optional(object({
+            type = string
+            arn  = string
+          }))
+          origin_request = optional(object({
+            arn          = string
+            include_body = bool
+          }))
+          origin_response = optional(object({
+            arn = string
+          }))
+        })))
+        allowed_methods          = optional(list(string))
+        cached_methods           = optional(list(string))
+        cache_policy_id          = optional(string)
+        origin_request_policy_id = optional(string)
+        compress                 = optional(bool)
+        viewer_protocol_policy   = optional(string)
+        viewer_request = optional(object({
+          type         = string
+          arn          = string
+          include_body = optional(bool)
+        }))
+        viewer_response = optional(object({
+          type = string
+          arn  = string
+        }))
+        origin_request = optional(object({
+          arn          = string
+          include_body = optional(bool)
+        }))
+        origin_response = optional(object({
+          type = string
+          arn  = string
+        }))
       })))
       paths = optional(list(string))
       path_overrides = optional(map(object({

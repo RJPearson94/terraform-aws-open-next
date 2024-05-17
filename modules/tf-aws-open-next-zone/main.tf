@@ -31,6 +31,7 @@ locals {
   behaviors        = lookup(local.open_next_config, "behaviors", null) != null ? local.open_next_config["behaviors"] : []
 
   default_server_function     = local.origins != null ? lookup(local.origins, "default", {}) : {}
+  image_optimisation_function = local.origins != null ? lookup(local.origins, "imageOptimizer", {}) : {}
   additional_server_functions = local.origins != null ? { for name, details in local.origins : name => details if contains(["s3", "imageOptimizer", "default"], name) == false } : {}
 
   create_distribution = var.distribution.deployment == "CREATE"
@@ -111,10 +112,9 @@ locals {
       paths = try(coalesce(try(local.user_supplied_behaviours.image_optimisation.paths, null), local.open_next_versions.v2 ? null : [for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" if behavior.origin == "imageOptimizer"]), null)
     })
     additional_origins = { for name, additional_server_function in local.additional_server_functions : name => merge(coalesce(local.user_supplied_behaviours.additional_origins, { paths = null, path_overrides = null, allowed_methods = null, cached_methods = null, cache_policy_id = null, origin_request_policy_id = null, compress = null, viewer_protocol_policy = null, viewer_request = null, viewer_response = null, origin_request = null, origin_response = null, origin_reference = null }), {
-      paths            = try(coalesce(try(local.user_supplied_behaviours.additional_origins[name].paths, null), local.open_next_versions.v2 ? null : [for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" if behavior.origin == name]), null)
-      origin_reference = coalesce(try(local.user_supplied_behaviours.additional_origins[name].origin_reference, null), name)
-      origin_request   = try(local.user_supplied_behaviours.additional_origins[name].origin_request, null)
-      path_overrides   = merge(try(local.user_supplied_behaviours.additional_origins[name].path_overrides, {}), { for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" => { origin_request = { arn = module.edge_function[behavior["edgeFunction"]].qualified_arn, include_body = true } } if behavior.origin == name && lookup(behavior, "edgeFunction", null) != null })
+      paths          = try(coalesce(try(local.user_supplied_behaviours.additional_origins[name].paths, null), local.open_next_versions.v2 ? null : [for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" if behavior.origin == name]), null)
+      origin_request = try(local.user_supplied_behaviours.additional_origins[name].origin_request, null)
+      path_overrides = merge(try(local.user_supplied_behaviours.additional_origins[name].path_overrides, {}), { for behavior in local.behaviors : behavior.pattern == "*" || startswith(behavior.pattern, "/") ? behavior.pattern : "/${behavior.pattern}" => { origin_request = { arn = module.edge_function[behavior["edgeFunction"]].qualified_arn, include_body = true } } if behavior.origin == name && lookup(behavior, "edgeFunction", null) != null })
     }) }
   })
 

@@ -30,14 +30,14 @@ locals {
   }
   merged_server = {
     zone_overrides = { for zone in local.zones : zone.name => {
-      paths = try(module.website_zone[zone.name].behaviours.server.paths, null)
+      paths          = try(module.website_zone[zone.name].behaviours.server.paths, null)
+      origin_request = try(module.website_zone[zone.name].behaviours.server.origin_request, null)
+      path_overrides = try(module.website_zone[zone.name].behaviours.server.path_overrides, null)
     } }
   }
-  merged_additional_origins = {
-    zone_overrides = { for zone in local.zones : zone.name => {
-      paths = try(module.website_zone[zone.name].behaviours.additional_origins.paths, null)
-    } }
-  }
+  merged_additional_origins = merge([for zone in local.zones : {
+    for name, origin in try(module.website_zone[zone.name].behaviours.additional_origins, {}) : "${zone.name}-${name}" => origin
+  }]...)
   merged_image_optimisation = {
     zone_overrides = { for zone in local.zones : zone.name => {
       paths = try(module.website_zone[zone.name].behaviours.image_optimisation.paths, null)
@@ -49,11 +49,12 @@ module "public_resources" {
   count  = local.use_shared_distribution ? 1 : 0
   source = "../tf-aws-open-next-public-resources"
 
-  zones = [for zone in local.zones : merge({
-    root = zone.root
-    name = zone.name
-    path = zone.path
-  }, module.website_zone[zone.name].zone_config)]
+  zones = [for zone in local.zones : merge(module.website_zone[zone.name].zone_config, {
+    root    = zone.root
+    name    = zone.name
+    path    = zone.path
+    origins = { for name, origin in module.website_zone[zone.name].zone_config.origins : contains(["server", "static_assets", "image_optimisation"], name) ? name : "${zone.name}-${name}" => origin }
+  })]
 
   prefix = var.prefix
   suffix = var.suffix
