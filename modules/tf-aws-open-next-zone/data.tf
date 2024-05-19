@@ -27,7 +27,7 @@ data "archive_file" "additional_server_function" {
 
   lifecycle {
     precondition {
-      condition     = local.open_next_versions.v3 == true && contains(["aws-lambda", "aws-lambda-streaming"], each.value.wrapper) 
+      condition     = local.open_next_versions.v3 == true && contains(["aws-lambda", "aws-lambda-streaming"], each.value.wrapper)
       error_message = "This module only supports hosting server functions using lambda"
     }
   }

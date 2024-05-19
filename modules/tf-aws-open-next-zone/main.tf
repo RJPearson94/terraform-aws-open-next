@@ -201,7 +201,7 @@ locals {
     } : null
   }]
 
-  log_groups = { for name, log_group in merge(concat([{ default_server = try(var.server_function.cloudwatch_log, null) }, { warmer = try(var.warmer_function.cloudwatch_log, null) }, { image_optimisation = try(var.image_optimisation_function.cloudwatch_log, null) }, { revalidation = try(var.revalidation_function.cloudwatch_log, null) } ], [for name in keys(local.additional_server_functions) : { "${name}" = try(var.additional_server_functions.function_overrides[name].cloudwatch_log, var.additional_server_functions.cloudwatch_log, null) }])...) : name => try(coalesce(log_group, var.cloudwatch_log), null) }
+  log_groups = { for name, log_group in merge(concat([{ default_server = try(var.server_function.cloudwatch_log, null) }, { warmer = try(var.warmer_function.cloudwatch_log, null) }, { image_optimisation = try(var.image_optimisation_function.cloudwatch_log, null) }, { revalidation = try(var.revalidation_function.cloudwatch_log, null) }], [for name in keys(local.additional_server_functions) : { "${name}" = try(var.additional_server_functions.function_overrides[name].cloudwatch_log, var.additional_server_functions.cloudwatch_log, null) }])...) : name => try(coalesce(log_group, var.cloudwatch_log), null) }
 }
 
 module "public_resources" {
@@ -811,7 +811,7 @@ resource "terraform_data" "isr_table_item" {
 # Cloudwatch Logs
 
 resource "aws_cloudwatch_log_group" "log_group" {
-  count = contains([ for log_group in values(local.log_groups) : try(log_group.deployment, "PER_FUNCTION") ], "SHARED_PER_ZONE") ? 1 : 0
+  count = contains([for log_group in values(local.log_groups) : try(log_group.deployment, "PER_FUNCTION")], "SHARED_PER_ZONE") ? 1 : 0
 
   name              = "/aws/lambda/${local.prefix}${try(var.cloudwatch_log.name, null)}${local.suffix}"
   retention_in_days = try(var.cloudwatch_log.retention_in_days, null)

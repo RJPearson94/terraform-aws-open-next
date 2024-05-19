@@ -14,7 +14,7 @@ variable "open_next_version_alias" {
   description = "An alias for the open next version"
   type        = string
 
-   validation {
+  validation {
     condition     = contains(["v2", "v3"], var.open_next_version_alias)
     error_message = "The open next alias can either be v2 or v3"
   }
