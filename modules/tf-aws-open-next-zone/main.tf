@@ -200,6 +200,8 @@ locals {
       folder_path = "${local.staging_alias}/custom"
     } : null
   }]
+
+  log_groups = { for name, log_group in merge(concat([{ default_server = try(var.server_function.cloudwatch_log, null) }, { warmer = try(var.warmer_function.cloudwatch_log, null) }, { image_optimisation = try(var.image_optimisation_function.cloudwatch_log, null) }, { revalidation = try(var.revalidation_function.cloudwatch_log, null) } ], [for name in keys(local.additional_server_functions) : { "${name}" = try(var.additional_server_functions.function_overrides[name].cloudwatch_log, var.additional_server_functions.cloudwatch_log, null) }])...) : name => try(coalesce(log_group, var.cloudwatch_log), null) }
 }
 
 module "public_resources" {
@@ -411,7 +413,7 @@ module "server_function" {
   environment_variables = local.server_at_edge ? {} : local.server_function_env_variables
 
   architecture   = try(coalesce(var.server_function.function_architecture, var.function_architecture), "x86_64")
-  cloudwatch_log = try(coalesce(var.server_function.cloudwatch_log, var.cloudwatch_log), null)
+  cloudwatch_log = local.log_groups["default_server"] != null ? merge(local.log_groups["default_server"], local.log_groups["default_server"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.server_function.iam, var.iam), null)
   vpc            = try(coalesce(var.server_function.vpc, var.vpc), null)
 
@@ -488,7 +490,7 @@ module "additional_server_function" {
   )
 
   architecture   = coalesce(try(var.additional_server_functions.function_overrides[each.key].function_architecture, var.additional_server_functions.function_architecture), "x86_64")
-  cloudwatch_log = try(var.additional_server_functions.function_overrides[each.key].cloudwatch_log, var.additional_server_functions.cloudwatch_log)
+  cloudwatch_log = local.log_groups[each.key] != null ? merge(local.log_groups[each.key], local.log_groups[each.key].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(var.additional_server_functions.function_overrides[each.key].iam, var.additional_server_functions.iam)
   vpc            = try(var.additional_server_functions.function_overrides[each.key].vpc, var.additional_server_functions.vpc)
 
@@ -584,7 +586,7 @@ module "warmer_function" {
   ]
 
   architecture   = try(coalesce(var.warmer_function.function_architecture, var.function_architecture), null)
-  cloudwatch_log = try(coalesce(var.warmer_function.cloudwatch_log, var.cloudwatch_log, null))
+  cloudwatch_log = local.log_groups["warmer"] != null ? merge(local.log_groups["warmer"], local.log_groups["warmer"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.warmer_function.iam, var.iam), null)
   vpc            = try(coalesce(var.warmer_function.vpc, var.vpc), null)
 
@@ -647,7 +649,7 @@ module "image_optimisation_function" {
   ]
 
   architecture   = try(coalesce(var.image_optimisation_function.function_architecture, var.function_architecture), null)
-  cloudwatch_log = try(coalesce(var.image_optimisation_function.cloudwatch_log, var.cloudwatch_log), null)
+  cloudwatch_log = local.log_groups["image_optimisation"] != null ? merge(local.log_groups["image_optimisation"], local.log_groups["image_optimisation"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.image_optimisation_function.iam, var.iam), null)
   vpc            = try(coalesce(var.image_optimisation_function.vpc, var.vpc), null)
 
@@ -724,7 +726,7 @@ module "revalidation_function" {
   ]
 
   architecture   = try(coalesce(var.revalidation_function.function_architecture, var.function_architecture), null)
-  cloudwatch_log = try(coalesce(var.revalidation_function.cloudwatch_log, var.cloudwatch_log), null)
+  cloudwatch_log = local.log_groups["revalidation"] != null ? merge(local.log_groups["revalidation"], local.log_groups["revalidation"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.revalidation_function.iam, var.iam), null)
   vpc            = try(coalesce(var.revalidation_function.vpc, var.vpc), null)
 
@@ -801,5 +803,23 @@ resource "terraform_data" "isr_table_item" {
       "TABLE_NAME" = local.isr_tag_mapping_db_name
       "ITEM"       = jsonencode(merge({ for name, value in each.value : name => value if name != "tf_key" }, { alias = { "S" = local.staging_alias } }))
     }, try(var.scripts.additional_environment_variables, {}), try(var.scripts.save_item_to_dynamo_script.additional_environment_variables, {}))
+  }
+}
+
+# Cloudwatch Logs
+
+resource "aws_cloudwatch_log_group" "log_group" {
+  count = contains([ for log_group in values(local.log_groups) : try(log_group.deployment, "PER_FUNCTION") ], "SHARED_PER_ZONE") ? 1 : 0
+
+  name              = "/aws/lambda/${local.prefix}${try(var.cloudwatch_log.name, null)}${local.suffix}"
+  retention_in_days = try(var.cloudwatch_log.retention_in_days, null)
+  log_group_class   = try(var.cloudwatch_log.log_group_class, null)
+  skip_destroy      = try(var.cloudwatch_log.skip_destroy, null)
+
+  lifecycle {
+    precondition {
+      condition     = try(var.cloudwatch_log.name, null) != null
+      error_message = "When a SHARED_PER_ZONE log group is specified, the name is mandatory"
+    }
   }
 }

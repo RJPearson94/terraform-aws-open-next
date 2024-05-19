@@ -59,14 +59,40 @@ variable "iam" {
   default = {}
 }
 
-variable "cloudwatch_log" {
-  description = "The default cloudwatch log group. This can be overridden for each function."
+variable "logging_config" {
+  description = "The default function logging configuration. The log group is determined by the cloudwatch_log variable. This can be overridden for each function."
   type = object({
-    retention_in_days = number
+    log_format            = optional(string)
+    application_log_level = optional(string)
+    system_log_level      = optional(string)
   })
-  default = {
-    retention_in_days = 7
-  }
+  default = null
+}
+
+variable "cloudwatch_log" {
+  description = <<EOF
+The default cloudwatch log group configuration. This can be overridden for each function."
+
+Possible values for deployment:
+  - PER_FUNCTION (default)
+  - SHARED_PER_ZONE
+  - USE_EXISTING
+
+When deployment is set to `SHARED_PER_ZONE` or `USE_EXISTING`, name is mandatory.
+
+For `SHARED_PER_ZONE`, the name will include the `aws/lambda` namespace and the supplied prefix and suffix
+For `USE_EXISTING`, the name will represent the log group name (including prefix)
+
+EOF
+
+  type = object({
+    deployment        = optional(string, "PER_FUNCTION")
+    retention_in_days = optional(number, 7)
+    name              = optional(string)
+    log_group_class   = optional(string)
+    skip_destroy      = optional(bool)
+  })
+  default = {}
 }
 
 variable "vpc" {
@@ -157,8 +183,17 @@ EOF
       path                 = optional(string)
       permissions_boundary = optional(string)
     }))
+    logging_config = optional(object({
+      log_format            = optional(string)
+      application_log_level = optional(string)
+      system_log_level      = optional(string)
+    }))
     cloudwatch_log = optional(object({
-      retention_in_days = number
+      deployment        = optional(string)
+      retention_in_days = optional(number)
+      name              = optional(string)
+      log_group_class   = optional(string)
+      skip_destroy      = optional(bool)
     }))
     timeouts = optional(object({
       create = optional(string)
@@ -314,8 +349,17 @@ EOF
       path                 = optional(string)
       permissions_boundary = optional(string)
     }))
+    logging_config = optional(object({
+      log_format            = optional(string)
+      application_log_level = optional(string)
+      system_log_level      = optional(string)
+    }))
     cloudwatch_log = optional(object({
-      retention_in_days = number
+      deployment        = optional(string)
+      retention_in_days = optional(number)
+      name              = optional(string)
+      log_group_class   = optional(string)
+      skip_destroy      = optional(bool)
     }))
     timeouts = optional(object({
       create = optional(string)
@@ -375,8 +419,17 @@ EOF
       path                 = optional(string)
       permissions_boundary = optional(string)
     }))
+    logging_config = optional(object({
+      log_format            = optional(string)
+      application_log_level = optional(string)
+      system_log_level      = optional(string)
+    }))
     cloudwatch_log = optional(object({
-      retention_in_days = number
+      deployment        = optional(string)
+      retention_in_days = optional(number)
+      name              = optional(string)
+      log_group_class   = optional(string)
+      skip_destroy      = optional(bool)
     }))
     timeouts = optional(object({
       create = optional(string)
@@ -421,8 +474,17 @@ EOF
         path                 = optional(string)
         permissions_boundary = optional(string)
       }))
+      logging_config = optional(object({
+        log_format            = optional(string)
+        application_log_level = optional(string)
+        system_log_level      = optional(string)
+      }))
       cloudwatch_log = optional(object({
-        retention_in_days = number
+        deployment        = optional(string)
+        retention_in_days = optional(number)
+        name              = optional(string)
+        log_group_class   = optional(string)
+        skip_destroy      = optional(bool)
       }))
       timeouts = optional(object({
         create = optional(string)
@@ -491,8 +553,17 @@ EOF
       path                 = optional(string)
       permissions_boundary = optional(string)
     }))
+    logging_config = optional(object({
+      log_format            = optional(string)
+      application_log_level = optional(string)
+      system_log_level      = optional(string)
+    }))
     cloudwatch_log = optional(object({
-      retention_in_days = number
+      deployment        = optional(string)
+      retention_in_days = optional(number)
+      name              = optional(string)
+      log_group_class   = optional(string)
+      skip_destroy      = optional(bool)
     }))
     timeouts = optional(object({
       create = optional(string)
@@ -549,8 +620,17 @@ EOF
       path                 = optional(string)
       permissions_boundary = optional(string)
     }))
+    logging_config = optional(object({
+      log_format            = optional(string)
+      application_log_level = optional(string)
+      system_log_level      = optional(string)
+    }))
     cloudwatch_log = optional(object({
-      retention_in_days = number
+      deployment        = optional(string)
+      retention_in_days = optional(number)
+      name              = optional(string)
+      log_group_class   = optional(string)
+      skip_destroy      = optional(bool)
     }))
     timeouts = optional(object({
       create = optional(string)

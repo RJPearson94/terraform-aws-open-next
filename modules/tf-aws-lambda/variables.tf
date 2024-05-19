@@ -56,13 +56,30 @@ variable "iam" {
   default = {}
 }
 
+variable "logging_config" {
+  description = "Override default function logging configuration. The log group is determined by the cloudwatch_log variable"
+  type = object({
+    log_format            = optional(string)
+    application_log_level = optional(string)
+    system_log_level      = optional(string)
+  })
+  default = null
+}
+
 variable "cloudwatch_log" {
   description = "Override the Cloudwatch logs configuration"
   type = object({
-    retention_in_days = number
+    deployment        = optional(string, "PER_FUNCTION")
+    retention_in_days = optional(number, 7)
+    name              = optional(string)
+    log_group_class   = optional(string)
+    skip_destroy      = optional(bool)
   })
-  default = {
-    retention_in_days = 7
+  default = {}
+
+  validation {
+    condition     = try(var.cloudwatch_log.deployment, null) == null || contains(["SHARED_PER_ZONE", "PER_FUNCTION", "USE_EXISTING"], var.cloudwatch_log.deployment)
+    error_message = "The cloudwatch log group deployment type can be one of null, SHARED_PER_ZONE, PER_FUNCTION or USE_EXISTING"
   }
 }
 

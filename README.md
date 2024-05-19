@@ -80,6 +80,8 @@ For open next v3, the module will read the `open-next.output.json` file in the .
 - `aws_lambda_permission.server_function_url_permission` and `aws_lambda_permission.image_optimisation_function_url_permission` have been merged into a list of `aws_lambda_permission.function_url_permission` resources in the `tf-aws-open-next-multi-zone` module. You can either let the resources re-create or update the references using either [move config](https://developer.hashicorp.com/terraform/tutorials/configuration-language/move-config), [import block](https://developer.hashicorp.com/terraform/language/import) or [import command](https://developer.hashicorp.com/terraform/cli/commands/import) [BREAKING CHANGE]
 - CloudFront cache policy ARN - you must now set the CloudFront Cache Policy ID
 - Auth function CloudFront log group - this configuration had no effect, so it has been removed
+- Lambda Logging configuration (for regional lambda's only) [NEW FEATURE]
+- Additional configuration of CloudWatch log groups, including having a log group for all regional functions in a zone [NEW FEATURE]
 
 If you are still using open next v2.x, you can set the `open_next_version` variable to `v2.x.x` (the default value). If you upgrade to Open Next v3.x, please set the `open_next_version` variable to `v3.x.x`.
 

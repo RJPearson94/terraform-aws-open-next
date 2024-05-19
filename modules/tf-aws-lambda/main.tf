@@ -6,6 +6,8 @@ locals {
   trigger_on_schedule = var.schedule != null
 
   alias_names = var.aliases.create ? var.aliases.names : []
+
+  has_log_group_per_function = try(var.cloudwatch_log.deployment, "PER_FUNCTION") == "PER_FUNCTION"
 }
 
 # Lambda
@@ -36,6 +38,17 @@ resource "aws_lambda_function" "lambda_function" {
     for_each = var.xray_tracing.enable == true ? [var.xray_tracing] : []
     content {
       mode = tracing_config.value.mode
+    }
+  }
+
+  dynamic "logging_config" {
+    for_each = var.logging_config != null || contains(["SHARED_PER_ZONE", "USE_EXISTING"], try(var.cloudwatch_log.deployment, null)) ? [var.logging_config] : []
+
+    content {
+      log_format            = coalesce(try(logging_config.value.log_format, null), "Text")
+      log_group             = contains(["SHARED_PER_ZONE", "USE_EXISTING"], try(var.cloudwatch_log.deployment, null)) ? var.cloudwatch_log.name : null
+      application_log_level = try(logging_config.value.application_log_level, null)
+      system_log_level      = try(logging_config.value.system_log_level, null)
     }
   }
 
@@ -105,10 +118,12 @@ resource "aws_lambda_permission" "function_url_permission" {
 # Cloudwatch Logs
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  count = var.run_at_edge == false ? 1 : 0
+  count = var.run_at_edge == false && local.has_log_group_per_function ? 1 : 0
 
-  name              = "/aws/lambda/${local.prefix}${var.function_name}${local.suffix}"
+  name              = "/aws/lambda/${local.prefix}${coalesce(try(var.cloudwatch_log.name, null), var.function_name)}${local.suffix}"
   retention_in_days = try(var.cloudwatch_log.retention_in_days, null)
+  log_group_class   = try(var.cloudwatch_log.log_group_class, null)
+  skip_destroy      = try(var.cloudwatch_log.skip_destroy, null)
 }
 
 # IAM
@@ -154,7 +169,7 @@ resource "aws_iam_policy" "lambda_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ], var.run_at_edge ? ["logs:CreateLogGroup"] : []),
-        "Resource" : var.run_at_edge ? "*" : "${one(aws_cloudwatch_log_group.lambda_log_group[*].arn)}:*",
+        "Resource" : var.run_at_edge ? "*" : local.has_log_group_per_function ? "${one(aws_cloudwatch_log_group.lambda_log_group[*].arn)}:*" : "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:${var.cloudwatch_log.name}:*"
         "Effect" : "Allow"
       }
       ],
