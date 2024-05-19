@@ -81,6 +81,8 @@ module "public_resources" {
 
   custom_error_responses = module.website_zone[local.root_zone_name].custom_error_responses
 
+  open_next_version_alias = can(regex("^v2\\.[0-9x]+\\.[0-9x]+$", var.open_next_version)) == true ? "v2" : "v3"
+
   scripts = var.scripts
 
   providers = {

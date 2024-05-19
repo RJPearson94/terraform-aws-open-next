@@ -9,6 +9,16 @@ locals {
   create_cache_policy = try(var.cache_policy.deployment, "CREATE") == "CREATE"
   cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : try(var.cache_policy.id, null)
 
+  cache_keys = {
+    v2 = ["accept", "rsc", "next-router-prefetch", "next-router-state-tree", "next-url", "x-prerender-bypass", "x-prerender-revalidate"]
+    v3 = ["x-open-next-cache-key"]
+  }
+
+  cloudfront_function_code = {
+    v2 = "xForwardedHost.js",
+    v3 = "cloudfrontFunctionOpenNextV3.js"
+  }
+
   should_create_auth_lambda    = contains(["DETACH", "CREATE"], var.auth_function.deployment) || (var.auth_function.deployment != "USE_EXISTING" && length({ for zone in local.zones : "${zone.name}-distribution" => zone if anytrue([for origin in zone.origins : origin.auth == "AUTH_LAMBDA"]) }) > 0)
   should_create_lambda_url_oac = var.lambda_url_oac.deployment == "CREATE" || length({ for zone in local.zones : "${zone.name}-distribution" => zone if anytrue([for origin in zone.origins : origin.auth == "OAC"]) }) > 0
   auth_lambda_qualified_arn    = var.auth_function.deployment == "USE_EXISTING" ? var.auth_function.qualified_arn : local.should_create_auth_lambda ? one(module.auth_function[*].qualified_arn) : null
@@ -402,7 +412,7 @@ resource "aws_cloudfront_function" "x_forwarded_host" {
   name    = "${local.prefix}x-forwarded-host-function${local.suffix}"
   runtime = coalesce(try(var.x_forwarded_host_function.runtime, null), "cloudfront-js-1.0")
   publish = true
-  code    = coalesce(try(var.x_forwarded_host_function.code, null), file("${path.module}/code/xForwardedHost.js"))
+  code    = coalesce(try(var.x_forwarded_host_function.code, null), file("${path.module}/code/${local.cloudfront_function_code[var.open_next_version_alias]}"))
 }
 
 # CloudFront
@@ -440,7 +450,7 @@ resource "aws_cloudfront_cache_policy" "cache_policy" {
       header_behavior = try(var.cache_policy.header_behavior, "whitelist")
 
       headers {
-        items = try(var.cache_policy.header_items, ["accept", "rsc", "next-router-prefetch", "next-router-state-tree", "next-url"])
+        items = coalesce(try(var.cache_policy.header_items, null), local.cache_keys[var.open_next_version_alias])
       }
     }
 

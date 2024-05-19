@@ -233,6 +233,8 @@ module "public_resources" {
 
   custom_error_responses = local.custom_error_responses
 
+  open_next_version_alias = local.open_next_versions.v2 == true ? "v2" : "v3"
+
   scripts = var.scripts
   providers = {
     aws     = aws.global

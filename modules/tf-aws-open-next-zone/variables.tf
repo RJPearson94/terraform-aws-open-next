@@ -819,7 +819,7 @@ EOF
       min_ttl               = optional(number, 0)
       cookie_behavior       = optional(string, "all")
       header_behavior       = optional(string, "whitelist")
-      header_items          = optional(list(string), ["accept", "rsc", "next-router-prefetch", "next-router-state-tree", "next-url"])
+      header_items          = optional(list(string))
       query_string_behavior = optional(string, "all")
     }), {})
   })

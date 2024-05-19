@@ -10,6 +10,16 @@ variable "suffix" {
   default     = null
 }
 
+variable "open_next_version_alias" {
+  description = "An alias for the open next version"
+  type        = string
+
+   validation {
+    condition     = contains(["v2", "v3"], var.open_next_version_alias)
+    error_message = "The open next alias can either be v2 or v3"
+  }
+}
+
 variable "enabled" {
   description = "Whether the CloudFront distrubtion is enabled"
   type        = bool
@@ -123,7 +133,7 @@ variable "cache_policy" {
     min_ttl               = optional(number, 0)
     cookie_behavior       = optional(string, "all")
     header_behavior       = optional(string, "whitelist")
-    header_items          = optional(list(string), ["accept", "rsc", "next-router-prefetch", "next-router-state-tree", "next-url"])
+    header_items          = optional(list(string))
     query_string_behavior = optional(string, "all")
   })
   default = {}
