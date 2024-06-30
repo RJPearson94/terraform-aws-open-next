@@ -51,7 +51,9 @@ locals {
     "REGIONAL_LAMBDA_WITH_AUTH_LAMBDA"           = "AUTH_LAMBDA"
   }
 
-  lambda_permissions = local.create_distribution ? merge([for distribution in try(one(module.public_resources[*].distributions_provisioned), []) : { for alias in local.aliases : "${distribution}-${alias}" => { distribution = distribution, alias = alias } }]...) : {}
+  // module.public_resources[0].distributions_provisioned was used in favour of one(module.public_resources[*].distributions_provisioned) as Terraform v1.5.7 marks the value as computed when both functions are used. Removing either function causes the value to reslove.
+  // As this is used as a key, the Terraform deployments using v1.5.7 errored. see https://github.com/RJPearson94/terraform-aws-open-next/issues/34 for more info
+  lambda_permissions = local.create_distribution ? merge([for distribution in try(module.public_resources[0].distributions_provisioned, []) : { for alias in local.aliases : "${distribution}-${alias}" => { distribution = distribution, alias = alias } }]...) : {}
 
   zone_origins = merge({
     static_assets = {

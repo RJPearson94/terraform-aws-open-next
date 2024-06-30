@@ -1,5 +1,7 @@
 # Open Next Terraform - tf-aws-open-next-multi-zone
 
+~> I am aware of issues trying to deploy resources using Terraform v1.5.7. If possible please try use Terraform v1.6.1 or above, as it appear changes in Terraform resolve the issue. See https://github.com/RJPearson94/terraform-aws-open-next/issues/35 for more details
+
 This module allows you to deploy multiple next.js websites using a [multi zone](https://nextjs.org/docs/pages/building-your-application/deploying/multi-zones) architecture. This uses [Open Next](https://github.com/serverless-stack/open-next) lambda, S3 and CloudFront.
 
 This module supports three deployment options:

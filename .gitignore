@@ -3,6 +3,7 @@ examples
 config.json
 .DS_Store
 *.drawio.bkp
+.prototools
 
 # Open Next
 .open-next
