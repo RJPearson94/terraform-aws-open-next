@@ -25,7 +25,7 @@ The possible values are:
 - SHARED_DISTRIBUTION
 - SHARED_DISTRIBUTION_AND_BUCKET
 
-See https://github.com/RJPearson94/terraform-aws-open-next/tree/v3.0.2?tab=readme-ov-file#deployment-options for a complete breakdown of the different deployment options.
+See https://github.com/RJPearson94/terraform-aws-open-next/tree/v3.0.3?tab=readme-ov-file#deployment-options for a complete breakdown of the different deployment options.
 
 EOF
 
@@ -303,7 +303,7 @@ Possible values for backend_deployment_type:
   - REGIONAL_LAMBDA
   - EDGE_LAMBDA (only supported with open next v2)
 
-See https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.2/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
+See https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.3/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
 
 **NOTE:** When backend_deployment_type is set to EDGE_LAMBDA, Terraform does not manage cloudwatch log groups; instead, the lambda service creates the log group when the function runs in each region.
 
@@ -389,7 +389,7 @@ Possible values for backend_deployment_type:
   - REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL
   - REGIONAL_LAMBDA
 
-See https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.2/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
+See https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.3/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
 
 **NOTE:** This can be overridden for each zone
 
@@ -510,7 +510,7 @@ Possible values for backend_deployment_type:
   - REGIONAL_LAMBDA_WITH_OAC_AND_ANY_PRINCIPAL
   - REGIONAL_LAMBDA
 
-See https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.2/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
+See https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.3/docs/backend-server-deployments.md for a complete breakdown of the different backend options.
 
 If you do not want to provision the image optimisation function, you can set `create` to false.
 
@@ -693,7 +693,7 @@ Possible values for deployment are:
 - NONE
 - CREATE
 
-The module has a local copy of the x-forwarded host CloudFront function code by default. The code can be seen at https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.2/modules/tf-aws-open-next-public-resources/code/xForwardedHost.js (open next v2) and https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.2/modules/tf-aws-open-next-public-resources/code/cloudfrontFunctionOpenNextV3.js (open next v3). 
+The module has a local copy of the x-forwarded host CloudFront function code by default. The code can be seen at https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.3/modules/tf-aws-open-next-public-resources/code/xForwardedHost.js (open next v2) and https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.3/modules/tf-aws-open-next-public-resources/code/cloudfrontFunctionOpenNextV3.js (open next v3). 
 
 This code can be overridden by passing in the javascript function as a string to the `code` argument under the `x_forwarded_host_function` object. An example can be seen below.
 
@@ -705,7 +705,7 @@ x_forwarded_host_function = {
 
 The auth function is deployed if the server function backend_deployment_type is set to EDGE_LAMBDA.
 
-The module has a local copy of the auth function code, which will be deployed by default. The code can be seen at https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.2/modules/tf-aws-open-next-public-resources/code/auth/index.js. You can override this to supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
+The module has a local copy of the auth function code, which will be deployed by default. The code can be seen at https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.3/modules/tf-aws-open-next-public-resources/code/auth/index.js. You can override this to supplying a zip file containing the lambda code with either a local reference or a reference to the zip in an S3 bucket.
 
 Possible values for the auth_function deployment are:
 - NONE 
@@ -1251,7 +1251,7 @@ Configuration for CloudFront distribution domain
 
 When the deployment is set to 'INDEPENDENT_ZONES' this can be overridden for each zone. If deployment is 'SHARED_DISTRIBUTION' or 'SHARED_DISTRIBUTION_AND_BUCKET' this configuration is used
 
-See https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.2/docs/domain-config.md for a complete breakdown of the different domain configuration options. 
+See https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.3/docs/domain-config.md for a complete breakdown of the different domain configuration options. 
 
 EOF
 
@@ -1281,7 +1281,7 @@ Configuration for continuous deployment config for CloudFront
 
 When the deployment is set to 'INDEPENDENT_ZONES' this can be overridden for each zone. If continuous deployment is enabled, updates to the origins, ordered_cache_behaviors and default_cache_behaviors are ignored
 
-See https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.2/docs/continuous-deployments.md for a complete breakdown of how to use continuous deployment. 
+See https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.0.3/docs/continuous-deployments.md for a complete breakdown of how to use continuous deployment. 
 
 EOF
 
