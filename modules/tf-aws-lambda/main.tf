@@ -30,8 +30,12 @@ resource "aws_lambda_function" "lambda_function" {
   layers        = var.layers
   architectures = var.run_at_edge == false ? [var.architecture] : ["x86_64"]
   publish       = var.publish
-  environment {
-    variables = var.environment_variables
+
+  dynamic "environment" {
+    for_each = length(var.environment_variables) > 0 ? [var.environment_variables] : []
+    content {
+      variables = environment.value
+    }
   }
 
   dynamic "tracing_config" {
