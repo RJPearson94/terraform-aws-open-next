@@ -148,6 +148,7 @@ module "website_zone" {
   aliases                              = try(coalesce(each.value.aliases, var.aliases), null)
   cache_control_immutable_assets_regex = try(coalesce(each.value.cache_control_immutable_assets_regex, var.cache_control_immutable_assets_regex), null)
   content_types                        = try(coalesce(each.value.content_types, var.content_types), null)
+  layers                               = try(coalesce(each.value.layers, var.layers), null)
 
   warmer_function             = try(coalesce(each.value.warmer_function, var.warmer_function), null)
   server_function             = try(coalesce(each.value.server_function, var.server_function), null)

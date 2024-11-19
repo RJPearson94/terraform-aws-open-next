@@ -351,7 +351,7 @@ module "edge_function" {
   }
 
   run_at_edge = true
-  runtime     = try(coalesce(try(var.edge_functions.function_overrides[each.key].runtime, null), try(var.edge_functions.runtime, null)), null)
+  runtime     = try(coalesce(try(var.edge_functions.function_overrides[each.key].runtime, null), try(var.edge_functions.runtime, null)), "nodejs20.x")
   handler     = try(coalesce(try(var.edge_functions.function_overrides[each.key].handler, null), try(var.edge_functions.handler, null)), "handler.handler")
 
   memory_size = try(coalesce(try(var.edge_functions.function_overrides[each.key].memory_size, null), try(var.edge_functions.memory_size, null)), null)
@@ -415,6 +415,7 @@ module "server_function" {
   )
 
   environment_variables = local.server_at_edge ? {} : local.server_function_env_variables
+  layers                = try(coalesce(try(var.server_function.layers, null), try(var.layers, null)), null)
 
   architecture   = try(coalesce(var.server_function.function_architecture, var.function_architecture), "x86_64")
   cloudwatch_log = local.log_groups["default_server"] != null ? merge(local.log_groups["default_server"], local.log_groups["default_server"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
@@ -478,6 +479,8 @@ module "additional_server_function" {
 
   memory_size = try(var.additional_server_functions.function_overrides[each.key].memory_size, var.additional_server_functions.memory_size)
   timeout     = try(var.additional_server_functions.function_overrides[each.key].timeout, var.additional_server_functions.timeout)
+
+  layers = try(coalesce(try(var.additional_server_functions.function_overrides[each.key].layers, null), try(var.additional_server_functions.layers, null), try(var.layers, null)), null)
 
   additional_iam_policies = try(coalesce(try(var.additional_server_functions.function_overrides[each.key].additional_iam_policies, null), try(var.additional_server_functions.additional_iam_policies, null)), [])
   iam_policy_statements = concat(
@@ -589,6 +592,8 @@ module "warmer_function" {
     }
   ]
 
+  layers = try(coalesce(var.warmer_function.layers, var.layers), null)
+
   architecture   = try(coalesce(var.warmer_function.function_architecture, var.function_architecture), null)
   cloudwatch_log = local.log_groups["warmer"] != null ? merge(local.log_groups["warmer"], local.log_groups["warmer"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.warmer_function.iam, var.iam), null)
@@ -656,6 +661,7 @@ module "image_optimisation_function" {
   cloudwatch_log = local.log_groups["image_optimisation"] != null ? merge(local.log_groups["image_optimisation"], local.log_groups["image_optimisation"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.image_optimisation_function.iam, var.iam), null)
   vpc            = try(coalesce(var.image_optimisation_function.vpc, var.vpc), null)
+  layers         = try(coalesce(var.image_optimisation_function.layers, var.layers), null)
 
   prefix = var.prefix
   suffix = var.suffix
@@ -733,6 +739,7 @@ module "revalidation_function" {
   cloudwatch_log = local.log_groups["revalidation"] != null ? merge(local.log_groups["revalidation"], local.log_groups["revalidation"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.revalidation_function.iam, var.iam), null)
   vpc            = try(coalesce(var.revalidation_function.vpc, var.vpc), null)
+  layers         = try(coalesce(var.revalidation_function.layers, var.layers), null)
 
   prefix = var.prefix
   suffix = var.suffix

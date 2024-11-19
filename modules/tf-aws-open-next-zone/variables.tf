@@ -50,6 +50,12 @@ variable "function_architecture" {
   default     = "arm64"
 }
 
+variable "layers" {
+  description = "The default layers that is applied to all regional functions. This can be overridden for each function."
+  type        = list(string)
+  default     = null
+}
+
 variable "iam" {
   description = "The default IAM configuration. This can be overridden for each function."
   type = object({
@@ -335,6 +341,7 @@ EOF
     timeout                          = optional(number, 10)
     memory_size                      = optional(number, 1024)
     function_architecture            = optional(string)
+    layers                           = optional(list(string))
     additional_environment_variables = optional(map(string), {})
     additional_iam_policies = optional(list(object({
       name   = string,
@@ -400,6 +407,7 @@ EOF
     timeout                          = optional(number, 10)
     memory_size                      = optional(number, 1024)
     function_architecture            = optional(string)
+    layers                           = optional(list(string))
     additional_environment_variables = optional(map(string), {})
     iam_policies = optional(object({
       include_bucket_access             = optional(bool, false)
@@ -455,6 +463,7 @@ EOF
       timeout                          = optional(number, 10)
       memory_size                      = optional(number, 1024)
       function_architecture            = optional(string)
+      layers                           = optional(list(string))
       additional_environment_variables = optional(map(string), {})
       iam_policies = optional(object({
         include_bucket_access             = optional(bool, false)
@@ -540,6 +549,7 @@ EOF
     additional_environment_variables = optional(map(string), {})
     function_architecture            = optional(string)
     static_image_optimisation        = optional(bool, false)
+    layers                           = optional(list(string))
     additional_iam_policies = optional(list(object({
       name   = string,
       arn    = optional(string)
@@ -606,6 +616,7 @@ EOF
     timeout                          = optional(number, 25)
     memory_size                      = optional(number, 1536)
     additional_environment_variables = optional(map(string), {})
+    layers                           = optional(list(string))
     function_architecture            = optional(string)
     additional_iam_policies = optional(list(object({
       name   = string,

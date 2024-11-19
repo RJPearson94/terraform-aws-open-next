@@ -43,6 +43,12 @@ variable "s3_exclusion_regex" {
   default     = null
 }
 
+variable "layers" {
+  description = "The default layers that is applied to all regional functions. This can be overridden for each function."
+  type        = list(string)
+  default     = null
+}
+
 variable "function_architecture" {
   description = "The default instruction set architecture for the lambda functions. This can be overridden for each zone and each function"
   type        = string
@@ -170,6 +176,7 @@ EOF
     memory_size                      = optional(number, 1024)
     function_architecture            = optional(string)
     schedule                         = optional(string, "rate(5 minutes)")
+    layers                           = optional(list(string))
     additional_environment_variables = optional(map(string), {})
     additional_iam_policies = optional(list(object({
       name   = string,
@@ -340,6 +347,7 @@ EOF
     timeout                          = optional(number, 10)
     memory_size                      = optional(number, 1024)
     function_architecture            = optional(string)
+    layers                           = optional(list(string))
     additional_environment_variables = optional(map(string), {})
     additional_iam_policies = optional(list(object({
       name   = string,
@@ -402,6 +410,7 @@ EOF
     timeout                          = optional(number, 10)
     memory_size                      = optional(number, 1024)
     function_architecture            = optional(string)
+    layers                           = optional(list(string))
     additional_environment_variables = optional(map(string), {})
     iam_policies = optional(object({
       include_bucket_access             = optional(bool, false)
@@ -457,6 +466,7 @@ EOF
       timeout                          = optional(number, 10)
       memory_size                      = optional(number, 1024)
       function_architecture            = optional(string)
+      layers                           = optional(list(string))
       additional_environment_variables = optional(map(string), {})
       iam_policies = optional(object({
         include_bucket_access             = optional(bool, false)
@@ -535,6 +545,7 @@ EOF
     backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
     timeout                          = optional(number, 25)
     memory_size                      = optional(number, 1536)
+    layers                           = optional(list(string))
     additional_environment_variables = optional(map(string), {})
     function_architecture            = optional(string)
     static_image_optimisation        = optional(bool, false)
@@ -600,6 +611,7 @@ EOF
     runtime                          = optional(string, "nodejs20.x")
     timeout                          = optional(number, 25)
     memory_size                      = optional(number, 1536)
+    layers                           = optional(list(string))
     additional_environment_variables = optional(map(string), {})
     function_architecture            = optional(string)
     additional_iam_policies = optional(list(object({
@@ -1337,6 +1349,7 @@ variable "zones" {
     path                  = optional(string)
     prefix_path_overrides = optional(bool, true)
     s3_exclusion_regex    = optional(string)
+    layers                = optional(list(string))
     function_architecture = optional(string)
     iam = optional(object({
       path                 = optional(string, "/")
@@ -1396,6 +1409,7 @@ variable "zones" {
       memory_size                      = optional(number, 1024)
       function_architecture            = optional(string)
       schedule                         = optional(string, "rate(5 minutes)")
+      layers                           = optional(list(string))
       additional_environment_variables = optional(map(string), {})
       additional_iam_policies = optional(list(object({
         name   = string,
@@ -1501,6 +1515,7 @@ variable "zones" {
       timeout                          = optional(number, 10)
       memory_size                      = optional(number, 1024)
       function_architecture            = optional(string)
+      layers                           = optional(list(string))
       additional_environment_variables = optional(map(string), {})
       additional_iam_policies = optional(list(object({
         name   = string,
@@ -1540,6 +1555,7 @@ variable "zones" {
       timeout                          = optional(number, 10)
       memory_size                      = optional(number, 1024)
       function_architecture            = optional(string)
+      layers                           = optional(list(string))
       additional_environment_variables = optional(map(string), {})
       iam_policies = optional(object({
         include_bucket_access             = optional(bool, false)
@@ -1595,6 +1611,7 @@ variable "zones" {
         timeout                          = optional(number, 10)
         memory_size                      = optional(number, 1024)
         function_architecture            = optional(string)
+        layers                           = optional(list(string))
         additional_environment_variables = optional(map(string), {})
         iam_policies = optional(object({
           include_bucket_access             = optional(bool, false)
@@ -1651,6 +1668,7 @@ variable "zones" {
       backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
       timeout                          = optional(number, 25)
       memory_size                      = optional(number, 1536)
+      layers                           = optional(list(string))
       additional_environment_variables = optional(map(string), {})
       function_architecture            = optional(string)
       static_image_optimisation        = optional(bool, false)
@@ -1701,6 +1719,7 @@ variable "zones" {
       runtime                          = optional(string, "nodejs20.x")
       timeout                          = optional(number, 25)
       memory_size                      = optional(number, 1536)
+      layers                           = optional(list(string))
       additional_environment_variables = optional(map(string), {})
       function_architecture            = optional(string)
       additional_iam_policies = optional(list(object({
