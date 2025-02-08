@@ -126,15 +126,17 @@ variable "lambda_url_oac" {
 variable "cache_policy" {
   description = "Configuration for the CloudFront cache policy"
   type = object({
-    deployment            = optional(string, "CREATE")
-    id                    = optional(string)
-    default_ttl           = optional(number, 0)
-    max_ttl               = optional(number, 31536000)
-    min_ttl               = optional(number, 0)
-    cookie_behavior       = optional(string, "all")
-    header_behavior       = optional(string, "whitelist")
-    header_items          = optional(list(string))
-    query_string_behavior = optional(string, "all")
+    deployment                    = optional(string, "CREATE")
+    id                            = optional(string)
+    default_ttl                   = optional(number, 0)
+    max_ttl                       = optional(number, 31536000)
+    min_ttl                       = optional(number, 0)
+    cookie_behavior               = optional(string, "all")
+    header_behavior               = optional(string, "whitelist")
+    header_items                  = optional(list(string))
+    query_string_behavior         = optional(string, "all")
+    enable_accept_encoding_brotli = optional(bool)
+    enable_accept_encoding_gzip   = optional(bool)
   })
   default = {}
 
@@ -156,11 +158,15 @@ variable "zones" {
     name                = string
     reinvalidation_hash = string
     origins = map(object({
-      domain_name = string
-      path        = optional(string)
-      arn         = optional(string)
-      auth        = optional(string)
-      headers     = optional(map(string))
+      domain_name         = string
+      path                = optional(string)
+      arn                 = optional(string)
+      auth                = optional(string)
+      headers             = optional(map(string))
+      keepalive_timeout   = optional(number)
+      read_timeout        = optional(number)
+      connection_attempts = optional(number)
+      connection_timeout  = optional(number)
     }))
     path = optional(string)
   }))

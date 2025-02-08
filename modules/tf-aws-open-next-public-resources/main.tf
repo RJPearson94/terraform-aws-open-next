@@ -194,6 +194,8 @@ locals {
         origin_path              = "${local.root_zones.path != null ? "/${local.root_zones.path}" : ""}/${custom_error_response.response_page.folder_path}"
         origin_headers           = null
         custom_origin_config     = null
+        connection_attempts      = null
+        connection_timeout       = null
       }
     ],
     flatten([
@@ -204,6 +206,8 @@ locals {
         origin_path              = zone.origins["static_assets"].path
         origin_headers           = null
         custom_origin_config     = null
+        connection_attempts      = null
+        connection_timeout       = null
         }],
         [for name, origin in zone.origins : {
           domain_name              = origin.domain_name
@@ -212,11 +216,15 @@ locals {
           origin_path              = origin.path
           origin_headers           = origin.headers
           custom_origin_config = {
-            http_port              = 80
-            https_port             = 443
-            origin_protocol_policy = "https-only"
-            origin_ssl_protocols   = ["TLSv1.2"]
+            http_port                = 80
+            https_port               = 443
+            origin_protocol_policy   = "https-only"
+            origin_ssl_protocols     = ["TLSv1.2"]
+            origin_keepalive_timeout = origin.keepalive_timeout
+            origin_read_timeout      = origin.read_timeout
           }
+          connection_attempts = origin.connection_attempts
+          connection_timeout  = origin.connection_timeout
         } if contains(["static_assets", "image_optimisation"], name) == false],
         lookup(zone.origins, "image_optimisation", null) == null ? [] : [{
           domain_name              = zone.origins["image_optimisation"].domain_name
@@ -225,11 +233,15 @@ locals {
           origin_path              = null
           origin_headers           = null
           custom_origin_config = {
-            http_port              = 80
-            https_port             = 443
-            origin_protocol_policy = "https-only"
-            origin_ssl_protocols   = ["TLSv1.2"]
+            http_port                = 80
+            https_port               = 443
+            origin_protocol_policy   = "https-only"
+            origin_ssl_protocols     = ["TLSv1.2"]
+            origin_keepalive_timeout = zone.origins["image_optimisation"].keepalive_timeout
+            origin_read_timeout      = zone.origins["image_optimisation"].read_timeout
           }
+          connection_attempts = zone.origins["image_optimisation"].connection_attempts
+          connection_timeout  = zone.origins["image_optimisation"].connection_timeout
       }])
     ])
   )
@@ -481,6 +493,9 @@ resource "aws_cloudfront_cache_policy" "cache_policy" {
     query_strings_config {
       query_string_behavior = try(var.cache_policy.query_string_behavior, "all")
     }
+
+    enable_accept_encoding_brotli = try(var.cache_policy.enable_accept_encoding_brotli, null)
+    enable_accept_encoding_gzip   = try(var.cache_policy.enable_accept_encoding_gzip, null)
   }
 }
 
@@ -495,6 +510,8 @@ resource "aws_cloudfront_distribution" "website_distribution" {
       origin_access_control_id = origin.value.origin_access_control_id
       origin_id                = origin.value.origin_id
       origin_path              = origin.value.origin_path
+      connection_attempts      = origin.value.connection_attempts
+      connection_timeout       = origin.value.connection_timeout
 
       dynamic "custom_header" {
         for_each = coalesce(origin.value.origin_headers, {})
@@ -509,10 +526,12 @@ resource "aws_cloudfront_distribution" "website_distribution" {
         for_each = origin.value.custom_origin_config != null ? [true] : []
 
         content {
-          http_port              = origin.value.custom_origin_config.http_port
-          https_port             = origin.value.custom_origin_config.https_port
-          origin_protocol_policy = origin.value.custom_origin_config.origin_protocol_policy
-          origin_ssl_protocols   = origin.value.custom_origin_config.origin_ssl_protocols
+          http_port                = origin.value.custom_origin_config.http_port
+          https_port               = origin.value.custom_origin_config.https_port
+          origin_protocol_policy   = origin.value.custom_origin_config.origin_protocol_policy
+          origin_ssl_protocols     = origin.value.custom_origin_config.origin_ssl_protocols
+          origin_keepalive_timeout = origin.value.custom_origin_config.origin_keepalive_timeout
+          origin_read_timeout      = origin.value.custom_origin_config.origin_read_timeout
         }
       }
     }
@@ -637,6 +656,8 @@ resource "aws_cloudfront_distribution" "production_distribution" {
       origin_access_control_id = origin.value.origin_access_control_id
       origin_id                = origin.value.origin_id
       origin_path              = origin.value.origin_path
+      connection_attempts      = origin.value.connection_attempts
+      connection_timeout       = origin.value.connection_timeout
 
       dynamic "custom_header" {
         for_each = coalesce(origin.value.origin_headers, {})
@@ -651,10 +672,12 @@ resource "aws_cloudfront_distribution" "production_distribution" {
         for_each = origin.value.custom_origin_config != null ? [true] : []
 
         content {
-          http_port              = origin.value.custom_origin_config.http_port
-          https_port             = origin.value.custom_origin_config.https_port
-          origin_protocol_policy = origin.value.custom_origin_config.origin_protocol_policy
-          origin_ssl_protocols   = origin.value.custom_origin_config.origin_ssl_protocols
+          http_port                = origin.value.custom_origin_config.http_port
+          https_port               = origin.value.custom_origin_config.https_port
+          origin_protocol_policy   = origin.value.custom_origin_config.origin_protocol_policy
+          origin_ssl_protocols     = origin.value.custom_origin_config.origin_ssl_protocols
+          origin_keepalive_timeout = origin.value.custom_origin_config.origin_keepalive_timeout
+          origin_read_timeout      = origin.value.custom_origin_config.origin_read_timeout
         }
       }
     }
@@ -785,6 +808,8 @@ resource "aws_cloudfront_distribution" "staging_distribution" {
       origin_access_control_id = origin.value.origin_access_control_id
       origin_id                = origin.value.origin_id
       origin_path              = origin.value.origin_path
+      connection_attempts      = origin.value.connection_attempts
+      connection_timeout       = origin.value.connection_timeout
 
       dynamic "custom_header" {
         for_each = coalesce(origin.value.origin_headers, {})
@@ -799,10 +824,12 @@ resource "aws_cloudfront_distribution" "staging_distribution" {
         for_each = origin.value.custom_origin_config != null ? [true] : []
 
         content {
-          http_port              = origin.value.custom_origin_config.http_port
-          https_port             = origin.value.custom_origin_config.https_port
-          origin_protocol_policy = origin.value.custom_origin_config.origin_protocol_policy
-          origin_ssl_protocols   = origin.value.custom_origin_config.origin_ssl_protocols
+          http_port                = origin.value.custom_origin_config.http_port
+          https_port               = origin.value.custom_origin_config.https_port
+          origin_protocol_policy   = origin.value.custom_origin_config.origin_protocol_policy
+          origin_ssl_protocols     = origin.value.custom_origin_config.origin_ssl_protocols
+          origin_keepalive_timeout = origin.value.custom_origin_config.origin_keepalive_timeout
+          origin_read_timeout      = origin.value.custom_origin_config.origin_read_timeout
         }
       }
     }

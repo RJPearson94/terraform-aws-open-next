@@ -110,6 +110,17 @@ variable "vpc" {
   default = null
 }
 
+variable "origin_timeouts" {
+  description = "The default CloudFront origin timeout settings. This can be overridden for each function that is connected as an origin on the CloudFront distribution i.e. not edge functions."
+  type = object({
+    keepalive_timeout   = optional(number)
+    read_timeout        = optional(number)
+    connection_attempts = optional(number)
+    connection_timeout  = optional(number)
+  })
+  default = null
+}
+
 variable "aliases" {
   description = "The production and staging aliases to use"
   type = object({
@@ -368,6 +379,12 @@ EOF
       log_group_class   = optional(string)
       skip_destroy      = optional(bool)
     }))
+    origin_timeouts = optional(object({
+      keepalive_timeout   = optional(number)
+      read_timeout        = optional(number)
+      connection_attempts = optional(number)
+      connection_timeout  = optional(number)
+    }))
     timeouts = optional(object({
       create = optional(string)
       update = optional(string)
@@ -439,6 +456,12 @@ EOF
       log_group_class   = optional(string)
       skip_destroy      = optional(bool)
     }))
+    origin_timeouts = optional(object({
+      keepalive_timeout   = optional(number)
+      read_timeout        = optional(number)
+      connection_attempts = optional(number)
+      connection_timeout  = optional(number)
+    }))
     timeouts = optional(object({
       create = optional(string)
       update = optional(string)
@@ -495,6 +518,12 @@ EOF
         log_group_class   = optional(string)
         skip_destroy      = optional(bool)
       }))
+      origin_timeouts = optional(object({
+        keepalive_timeout   = optional(number)
+        read_timeout        = optional(number)
+        connection_attempts = optional(number)
+        connection_timeout  = optional(number)
+      }), {})
       timeouts = optional(object({
         create = optional(string)
         update = optional(string)
@@ -574,6 +603,12 @@ EOF
       name              = optional(string)
       log_group_class   = optional(string)
       skip_destroy      = optional(bool)
+    }))
+    origin_timeouts = optional(object({
+      keepalive_timeout   = optional(number)
+      read_timeout        = optional(number)
+      connection_attempts = optional(number)
+      connection_timeout  = optional(number)
     }))
     timeouts = optional(object({
       create = optional(string)
@@ -823,15 +858,17 @@ EOF
       deployment = optional(string, "NONE")
     }), {})
     cache_policy = optional(object({
-      deployment            = optional(string, "CREATE")
-      id                    = optional(string)
-      default_ttl           = optional(number, 0)
-      max_ttl               = optional(number, 31536000)
-      min_ttl               = optional(number, 0)
-      cookie_behavior       = optional(string, "all")
-      header_behavior       = optional(string, "whitelist")
-      header_items          = optional(list(string))
-      query_string_behavior = optional(string, "all")
+      deployment                    = optional(string, "CREATE")
+      id                            = optional(string)
+      default_ttl                   = optional(number, 0)
+      max_ttl                       = optional(number, 31536000)
+      min_ttl                       = optional(number, 0)
+      cookie_behavior               = optional(string, "all")
+      header_behavior               = optional(string, "whitelist")
+      header_items                  = optional(list(string))
+      query_string_behavior         = optional(string, "all")
+      enable_accept_encoding_brotli = optional(bool)
+      enable_accept_encoding_gzip   = optional(bool)
     }), {})
   })
   default = {}

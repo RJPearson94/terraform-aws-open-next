@@ -57,37 +57,53 @@ locals {
 
   zone_origins = merge({
     static_assets = {
-      domain_name  = local.website_bucket_domain_name
-      backend_name = "website-bucket"
-      arn          = null
-      path         = "/${module.s3_assets.origin_asset_path}"
-      auth         = null
-      headers      = null
+      domain_name         = local.website_bucket_domain_name
+      backend_name        = "website-bucket"
+      arn                 = null
+      path                = "/${module.s3_assets.origin_asset_path}"
+      auth                = null
+      headers             = null
+      keepalive_timeout   = null
+      read_timeout        = null
+      connection_attempts = null
+      connection_timeout  = null
     }
     image_optimisation = {
-      domain_name  = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].url_hostnames)[local.staging_alias] : null
-      backend_name = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].name) : null
-      arn          = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].arn) : null
-      path         = null
-      auth         = lookup(local.auth_options, var.image_optimisation_function.backend_deployment_type, null)
-      headers      = null
+      domain_name         = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].url_hostnames)[local.staging_alias] : null
+      backend_name        = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].name) : null
+      arn                 = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].arn) : null
+      path                = null
+      auth                = lookup(local.auth_options, var.image_optimisation_function.backend_deployment_type, null)
+      headers             = null
+      keepalive_timeout   = var.image_optimisation_function.create ? try(coalesce(try(var.image_optimisation_function.origin_timeouts.keepalive_timeout, null), try(var.origin_timeouts.keepalive_timeout, null)), null) : null
+      read_timeout        = var.image_optimisation_function.create ? try(coalesce(try(var.image_optimisation_function.origin_timeouts.read_timeout, null), try(var.origin_timeouts.read_timeout, null)), null) : null
+      connection_attempts = var.image_optimisation_function.create ? try(coalesce(try(var.image_optimisation_function.origin_timeouts.connection_attempts, null), try(var.origin_timeouts.connection_attempts, null)), null) : null
+      connection_timeout  = var.image_optimisation_function.create ? try(coalesce(try(var.image_optimisation_function.origin_timeouts.connection_timeout, null), try(var.origin_timeouts.connection_timeout, null)), null) : null
     }
     },
     local.server_at_edge ? {} : { server = {
-      domain_name  = lookup(module.server_function.url_hostnames, local.staging_alias, null)
-      backend_name = module.server_function.name
-      arn          = module.server_function.arn
-      path         = null
-      auth         = lookup(local.auth_options, var.server_function.backend_deployment_type, null)
-      headers      = null
+      domain_name         = lookup(module.server_function.url_hostnames, local.staging_alias, null)
+      backend_name        = module.server_function.name
+      arn                 = module.server_function.arn
+      path                = null
+      auth                = lookup(local.auth_options, var.server_function.backend_deployment_type, null)
+      headers             = null
+      keepalive_timeout   = try(coalesce(try(var.server_function.origin_timeouts.keepalive_timeout, null), try(var.origin_timeouts.keepalive_timeout, null)), null)
+      read_timeout        = try(coalesce(try(var.server_function.origin_timeouts.read_timeout, null), try(var.origin_timeouts.read_timeout, null)), null)
+      connection_attempts = try(coalesce(try(var.server_function.origin_timeouts.connection_attempts, null), try(var.origin_timeouts.connection_attempts, null)), null)
+      connection_timeout  = try(coalesce(try(var.server_function.origin_timeouts.connection_timeout, null), try(var.origin_timeouts.connection_timeout, null)), null)
     } },
     { for name, additional_server_function in local.additional_server_functions : name => {
-      domain_name  = lookup(module.additional_server_function[name].url_hostnames, local.staging_alias, null)
-      backend_name = module.additional_server_function[name].name
-      arn          = module.additional_server_function[name].arn
-      path         = null
-      auth         = lookup(local.auth_options, try(var.additional_server_functions.function_overrides[name].backend_deployment_type, var.additional_server_functions.backend_deployment_type), null)
-      headers      = null
+      domain_name         = lookup(module.additional_server_function[name].url_hostnames, local.staging_alias, null)
+      backend_name        = module.additional_server_function[name].name
+      arn                 = module.additional_server_function[name].arn
+      path                = null
+      auth                = lookup(local.auth_options, try(var.additional_server_functions.function_overrides[name].backend_deployment_type, var.additional_server_functions.backend_deployment_type), null)
+      headers             = null
+      keepalive_timeout   = try(coalesce(try(var.additional_server_functions.function_overrides[name].origin_timeouts.keepalive_timeout, null), try(var.additional_server_functions.origin_timeouts.keepalive_timeout, null), try(var.origin_timeouts.keepalive_timeout, null)), null)
+      read_timeout        = try(coalesce(try(var.additional_server_functions.function_overrides[name].origin_timeouts.read_timeout, null), try(var.additional_server_functions.origin_timeouts.read_timeout, null), try(var.origin_timeouts.read_timeout, null)), null)
+      connection_attempts = try(coalesce(try(var.additional_server_functions.function_overrides[name].origin_timeouts.connection_attempts, null), try(var.additional_server_functions.origin_timeouts.connection_attempts, null), try(var.origin_timeouts.connection_attempts, null)), null)
+      connection_timeout  = try(coalesce(try(var.additional_server_functions.function_overrides[name].origin_timeouts.connection_timeout, null), try(var.additional_server_functions.origin_timeouts.connection_timeout, null), try(var.origin_timeouts.connection_timeout, null)), null)
     } if try(var.additional_server_functions.function_overrides[name].backend_deployment_type, var.additional_server_functions.backend_deployment_type) != "EDGE_LAMBDA" }
   )
   zone = {
