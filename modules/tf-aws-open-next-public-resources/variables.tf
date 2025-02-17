@@ -197,7 +197,7 @@ variable "response_headers" {
         mode_block = optional(bool)
         override   = bool
         protection = bool
-        report_url = optional(string)
+        report_uri = optional(string)
       }))
     }))
     server_timing_headers_config = optional(object({
