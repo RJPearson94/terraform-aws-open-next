@@ -47,3 +47,7 @@ output "alternate_domain_names" {
   description = "Extra CNAMEs (alternate domain names) associated with the cloudfront distribution"
   value       = local.create_distribution ? one(module.public_resources[*].aliases) : null
 }
+
+output "response_headers_policy_id" {
+  value = one(module.public_resources[*].response_headers_policy_id)
+}

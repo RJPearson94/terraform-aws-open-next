@@ -151,6 +151,78 @@ variable "cache_policy" {
   }
 }
 
+variable "response_headers" {
+  description = "Configuration for the CloudFront response headers"
+  type = object({
+    deployment = optional(string, "NONE") # NONE, CREATE, USE_EXISTING or DETACH
+    id         = optional(string)
+    cors_config = optional(object({
+      access_control_allow_credentials = bool
+      access_control_allow_headers     = list(string)
+      access_control_allow_methods     = list(string)
+      access_control_allow_origins     = list(string)
+      access_control_expose_headers    = optional(list(string), [])
+      access_control_max_age_seconds   = optional(number)
+      origin_override                  = bool
+    }))
+    custom_headers_config = optional(list(object({
+      header   = string
+      override = bool
+      value    = string
+    })), [])
+    remove_headers = optional(list(string), [])
+    security_headers_config = optional(object({
+      content_security_policy = optional(object({
+        policy   = string
+        override = bool
+      }))
+      content_type_options = optional(object({
+        override = bool
+      }))
+      frame_options = optional(object({
+        frame_option = string
+        override     = bool
+      }))
+      referrer_policy = optional(object({
+        override = bool
+        policy   = string
+      }))
+      strict_transport_security = optional(object({
+        max_age            = number
+        include_subdomains = optional(bool)
+        override           = bool
+        preload            = optional(bool)
+      }))
+      xss_protection = optional(object({
+        mode_block = optional(bool)
+        override   = bool
+        protection = bool
+        report_url = optional(string)
+      }))
+    }))
+    server_timing_headers_config = optional(object({
+      enabled       = bool
+      sampling_rate = number
+    }))
+  })
+  default = {}
+
+  validation {
+    condition     = contains(["NONE", "USE_EXISTING", "CREATE", "DETACH"], var.response_headers.deployment)
+    error_message = "The response headers deployment can be one of NONE, USE_EXISTING, CREATE, or DETACH"
+  }
+
+  validation {
+    condition     = anytrue([contains(["NONE", "CREATE", "DETACH"], var.response_headers.deployment), (var.response_headers.deployment == "USE_EXISTING" && var.response_headers.id != null)])
+    error_message = "The response headers ID must be set when the deployment is set to USE_EXISTING"
+  }
+
+  validation {
+    condition     = anytrue([contains(["NONE", "USE_EXISTING", "DETACH"], var.response_headers.deployment), var.response_headers.deployment == "CREATE" && (var.response_headers.id == null || var.response_headers.id == "")])
+    error_message = "The response headers ID must be null or empty when the deployment is set to CREATE"
+  }
+}
+
 variable "zones" {
   description = "Configuration for the website zones to assoicate with the distribution"
   type = list(object({
@@ -196,12 +268,13 @@ variable "behaviours" {
   type = object({
     custom_error_responses = optional(object({
       path_overrides = optional(map(object({
-        allowed_methods          = optional(list(string))
-        cached_methods           = optional(list(string))
-        cache_policy_id          = optional(string)
-        origin_request_policy_id = optional(string)
-        compress                 = optional(bool)
-        viewer_protocol_policy   = optional(string)
+        allowed_methods            = optional(list(string))
+        cached_methods             = optional(list(string))
+        cache_policy_id            = optional(string)
+        origin_request_policy_id   = optional(string)
+        response_headers_policy_id = optional(string)
+        compress                   = optional(bool)
+        viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
           type         = string
           arn          = string
@@ -219,12 +292,13 @@ variable "behaviours" {
           arn = string
         }))
       })))
-      allowed_methods          = optional(list(string))
-      cached_methods           = optional(list(string))
-      cache_policy_id          = optional(string)
-      origin_request_policy_id = optional(string)
-      compress                 = optional(bool)
-      viewer_protocol_policy   = optional(string)
+      allowed_methods            = optional(list(string))
+      cached_methods             = optional(list(string))
+      cache_policy_id            = optional(string)
+      origin_request_policy_id   = optional(string)
+      response_headers_policy_id = optional(string)
+      compress                   = optional(bool)
+      viewer_protocol_policy     = optional(string)
       viewer_request = optional(object({
         type         = string
         arn          = string
@@ -248,12 +322,13 @@ variable "behaviours" {
         paths            = optional(list(string))
         additional_paths = optional(list(string))
         path_overrides = optional(map(object({
-          allowed_methods          = optional(list(string))
-          cached_methods           = optional(list(string))
-          cache_policy_id          = optional(string)
-          origin_request_policy_id = optional(string)
-          compress                 = optional(bool)
-          viewer_protocol_policy   = optional(string)
+          allowed_methods            = optional(list(string))
+          cached_methods             = optional(list(string))
+          cache_policy_id            = optional(string)
+          origin_request_policy_id   = optional(string)
+          response_headers_policy_id = optional(string)
+          compress                   = optional(bool)
+          viewer_protocol_policy     = optional(string)
           viewer_request = optional(object({
             type         = string
             arn          = string
@@ -271,12 +346,13 @@ variable "behaviours" {
             arn = string
           }))
         })))
-        allowed_methods          = optional(list(string))
-        cached_methods           = optional(list(string))
-        cache_policy_id          = optional(string)
-        origin_request_policy_id = optional(string)
-        compress                 = optional(bool)
-        viewer_protocol_policy   = optional(string)
+        allowed_methods            = optional(list(string))
+        cached_methods             = optional(list(string))
+        cache_policy_id            = optional(string)
+        origin_request_policy_id   = optional(string)
+        response_headers_policy_id = optional(string)
+        compress                   = optional(bool)
+        viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
           type         = string
           arn          = string
@@ -298,12 +374,13 @@ variable "behaviours" {
       paths            = optional(list(string))
       additional_paths = optional(list(string))
       path_overrides = optional(map(object({
-        allowed_methods          = optional(list(string))
-        cached_methods           = optional(list(string))
-        cache_policy_id          = optional(string)
-        origin_request_policy_id = optional(string)
-        compress                 = optional(bool)
-        viewer_protocol_policy   = optional(string)
+        allowed_methods            = optional(list(string))
+        cached_methods             = optional(list(string))
+        cache_policy_id            = optional(string)
+        origin_request_policy_id   = optional(string)
+        response_headers_policy_id = optional(string)
+        compress                   = optional(bool)
+        viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
           type         = string
           arn          = string
@@ -321,12 +398,13 @@ variable "behaviours" {
           arn = string
         }))
       })))
-      allowed_methods          = optional(list(string))
-      cached_methods           = optional(list(string))
-      cache_policy_id          = optional(string)
-      origin_request_policy_id = optional(string)
-      compress                 = optional(bool)
-      viewer_protocol_policy   = optional(string)
+      allowed_methods            = optional(list(string))
+      cached_methods             = optional(list(string))
+      cache_policy_id            = optional(string)
+      origin_request_policy_id   = optional(string)
+      response_headers_policy_id = optional(string)
+      compress                   = optional(bool)
+      viewer_protocol_policy     = optional(string)
       viewer_request = optional(object({
         type         = string
         arn          = string
@@ -349,12 +427,13 @@ variable "behaviours" {
       zone_overrides = optional(map(object({
         paths = optional(list(string))
         path_overrides = optional(map(object({
-          allowed_methods          = optional(list(string))
-          cached_methods           = optional(list(string))
-          cache_policy_id          = optional(string)
-          origin_request_policy_id = optional(string)
-          compress                 = optional(bool)
-          viewer_protocol_policy   = optional(string)
+          allowed_methods            = optional(list(string))
+          cached_methods             = optional(list(string))
+          cache_policy_id            = optional(string)
+          origin_request_policy_id   = optional(string)
+          response_headers_policy_id = optional(string)
+          compress                   = optional(bool)
+          viewer_protocol_policy     = optional(string)
           viewer_request = optional(object({
             type         = string
             arn          = string
@@ -372,12 +451,13 @@ variable "behaviours" {
             arn = string
           }))
         })))
-        allowed_methods          = optional(list(string))
-        cached_methods           = optional(list(string))
-        cache_policy_id          = optional(string)
-        origin_request_policy_id = optional(string)
-        compress                 = optional(bool)
-        viewer_protocol_policy   = optional(string)
+        allowed_methods            = optional(list(string))
+        cached_methods             = optional(list(string))
+        cache_policy_id            = optional(string)
+        origin_request_policy_id   = optional(string)
+        response_headers_policy_id = optional(string)
+        compress                   = optional(bool)
+        viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
           type         = string
           arn          = string
@@ -398,12 +478,13 @@ variable "behaviours" {
       })))
       paths = optional(list(string))
       path_overrides = optional(map(object({
-        allowed_methods          = optional(list(string))
-        cached_methods           = optional(list(string))
-        cache_policy_id          = optional(string)
-        origin_request_policy_id = optional(string)
-        compress                 = optional(bool)
-        viewer_protocol_policy   = optional(string)
+        allowed_methods            = optional(list(string))
+        cached_methods             = optional(list(string))
+        cache_policy_id            = optional(string)
+        origin_request_policy_id   = optional(string)
+        response_headers_policy_id = optional(string)
+        compress                   = optional(bool)
+        viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
           type         = string
           arn          = string
@@ -421,12 +502,13 @@ variable "behaviours" {
           arn = string
         }))
       })))
-      allowed_methods          = optional(list(string))
-      cached_methods           = optional(list(string))
-      cache_policy_id          = optional(string)
-      origin_request_policy_id = optional(string)
-      compress                 = optional(bool)
-      viewer_protocol_policy   = optional(string)
+      allowed_methods            = optional(list(string))
+      cached_methods             = optional(list(string))
+      cache_policy_id            = optional(string)
+      origin_request_policy_id   = optional(string)
+      response_headers_policy_id = optional(string)
+      compress                   = optional(bool)
+      viewer_protocol_policy     = optional(string)
       viewer_request = optional(object({
         type         = string
         arn          = string
@@ -448,12 +530,13 @@ variable "behaviours" {
     additional_origins = optional(map(object({
       paths = optional(list(string))
       path_overrides = optional(map(object({
-        allowed_methods          = optional(list(string))
-        cached_methods           = optional(list(string))
-        cache_policy_id          = optional(string)
-        origin_request_policy_id = optional(string)
-        compress                 = optional(bool)
-        viewer_protocol_policy   = optional(string)
+        allowed_methods            = optional(list(string))
+        cached_methods             = optional(list(string))
+        cache_policy_id            = optional(string)
+        origin_request_policy_id   = optional(string)
+        response_headers_policy_id = optional(string)
+        compress                   = optional(bool)
+        viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
           type         = string
           arn          = string
@@ -471,12 +554,13 @@ variable "behaviours" {
           arn = string
         }))
       })))
-      allowed_methods          = optional(list(string))
-      cached_methods           = optional(list(string))
-      cache_policy_id          = optional(string)
-      origin_request_policy_id = optional(string)
-      compress                 = optional(bool)
-      viewer_protocol_policy   = optional(string)
+      allowed_methods            = optional(list(string))
+      cached_methods             = optional(list(string))
+      cache_policy_id            = optional(string)
+      origin_request_policy_id   = optional(string)
+      response_headers_policy_id = optional(string)
+      compress                   = optional(bool)
+      viewer_protocol_policy     = optional(string)
       viewer_request = optional(object({
         type         = string
         arn          = string
@@ -499,12 +583,13 @@ variable "behaviours" {
       zone_overrides = optional(map(object({
         paths = optional(list(string))
         path_overrides = optional(map(object({
-          allowed_methods          = optional(list(string))
-          cached_methods           = optional(list(string))
-          cache_policy_id          = optional(string)
-          origin_request_policy_id = optional(string)
-          compress                 = optional(bool)
-          viewer_protocol_policy   = optional(string)
+          allowed_methods            = optional(list(string))
+          cached_methods             = optional(list(string))
+          cache_policy_id            = optional(string)
+          origin_request_policy_id   = optional(string)
+          response_headers_policy_id = optional(string)
+          compress                   = optional(bool)
+          viewer_protocol_policy     = optional(string)
           viewer_request = optional(object({
             type         = string
             arn          = string
@@ -522,12 +607,13 @@ variable "behaviours" {
             arn = string
           }))
         })))
-        allowed_methods          = optional(list(string))
-        cached_methods           = optional(list(string))
-        cache_policy_id          = optional(string)
-        origin_request_policy_id = optional(string)
-        compress                 = optional(bool)
-        viewer_protocol_policy   = optional(string)
+        allowed_methods            = optional(list(string))
+        cached_methods             = optional(list(string))
+        cache_policy_id            = optional(string)
+        origin_request_policy_id   = optional(string)
+        response_headers_policy_id = optional(string)
+        compress                   = optional(bool)
+        viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
           type         = string
           arn          = string
@@ -548,12 +634,13 @@ variable "behaviours" {
       })))
       paths = optional(list(string))
       path_overrides = optional(map(object({
-        allowed_methods          = optional(list(string))
-        cached_methods           = optional(list(string))
-        cache_policy_id          = optional(string)
-        origin_request_policy_id = optional(string)
-        compress                 = optional(bool)
-        viewer_protocol_policy   = optional(string)
+        allowed_methods            = optional(list(string))
+        cached_methods             = optional(list(string))
+        cache_policy_id            = optional(string)
+        origin_request_policy_id   = optional(string)
+        response_headers_policy_id = optional(string)
+        compress                   = optional(bool)
+        viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
           type         = string
           arn          = string
@@ -571,12 +658,13 @@ variable "behaviours" {
           arn = string
         }))
       })))
-      allowed_methods          = optional(list(string))
-      cached_methods           = optional(list(string))
-      cache_policy_id          = optional(string)
-      origin_request_policy_id = optional(string)
-      compress                 = optional(bool)
-      viewer_protocol_policy   = optional(string)
+      allowed_methods            = optional(list(string))
+      cached_methods             = optional(list(string))
+      cache_policy_id            = optional(string)
+      origin_request_policy_id   = optional(string)
+      response_headers_policy_id = optional(string)
+      compress                   = optional(bool)
+      viewer_protocol_policy     = optional(string)
       viewer_request = optional(object({
         type         = string
         arn          = string

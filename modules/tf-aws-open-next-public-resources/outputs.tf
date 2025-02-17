@@ -62,3 +62,7 @@ output "cache_policy_id" {
   description = "The default cache policy ID to associate with the distribution"
   value       = local.cache_policy_id
 }
+
+output "response_headers_policy_id" {
+  value = local.response_headers_policy_id
+}
