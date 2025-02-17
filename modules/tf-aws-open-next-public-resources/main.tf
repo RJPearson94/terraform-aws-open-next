@@ -624,9 +624,9 @@ resource "aws_cloudfront_response_headers_policy" "response_headers" {
 
         content {
           access_control_max_age_sec = strict_transport_security.value.max_age
-          include_subdomains         = try(strict_transport_security.value.include_subdomains, null)
+          include_subdomains         = strict_transport_security.value.include_subdomains
           override                   = strict_transport_security.value.override
-          preload                    = try(strict_transport_security.value.preload, null)
+          preload                    = strict_transport_security.value.preload
         }
       }
 
@@ -634,10 +634,10 @@ resource "aws_cloudfront_response_headers_policy" "response_headers" {
         for_each = try(var.response_headers.security_headers_config.xss_protection, null) != null ? [var.response_headers.security_headers_config.xss_protection] : []
 
         content {
-          mode_block = try(xss_protection.value.mode_block)
+          mode_block = xss_protection.value.mode_block
           override   = xss_protection.value.override
           protection = xss_protection.value.protection
-          report_uri = try(xss_protection.value.report_uri, null)
+          report_uri = xss_protection.value.report_uri
         }
       }
     }
