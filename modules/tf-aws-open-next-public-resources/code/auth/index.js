@@ -38,12 +38,9 @@ exports.handler = async (event) => {
     throw new Error(`Unexpected origin type. Expected 'custom'. Got: ${JSON.stringify(request.origin)}`);
   }
 
-  const uri = `/${request.uri.substring(1).split('/').slice(1).join('/')}`;
-  request.uri = uri;
-
   const host = request.headers["host"][0].value;
   const region = host.split(".")[2];
-  const path = `${uri}${request.querystring ? "?" + request.querystring : ""}`;
+  const path = `${request.uri}${request.querystring ? "?" + request.querystring : ""}`;
 
   const req = new HttpRequest({
     method: request.method,
