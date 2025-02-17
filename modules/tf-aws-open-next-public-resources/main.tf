@@ -537,12 +537,11 @@ resource "aws_cloudfront_response_headers_policy" "response_headers" {
       }
 
       dynamic "access_control_expose_headers" {
-        for_each = var.response_headers.cors_config.access_control_expose_headers
+        for_each = length(var.response_headers.cors_config.access_control_expose_headers) > 0 ? [true] : []
 
         content {
           items = var.response_headers.cors_config.access_control_expose_headers
         }
-
       }
 
       access_control_max_age_sec = try(var.response_headers.cors_config.access_control_max_age_sec, null)
