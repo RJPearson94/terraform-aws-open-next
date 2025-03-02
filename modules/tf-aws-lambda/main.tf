@@ -230,7 +230,7 @@ resource "aws_iam_role_policy_attachment" "additional_policy_attachment" {
     for additional_iam_policy in var.additional_iam_policies : additional_iam_policy.name => additional_iam_policy
   }
   role       = aws_iam_role.lambda_iam.name
-  policy_arn = coalesce(each.value.arn, aws_iam_policy.additional_policy[each.key].arn)
+  policy_arn = coalesce(each.value.arn, try(aws_iam_policy.additional_policy[each.key].arn, null))
 
   provider = aws.iam
 }
