@@ -40,13 +40,31 @@ exports.handler = async (event) => {
 
   const host = request.headers["host"][0].value;
   const region = host.split(".")[2];
-  const path = `${request.uri}${request.querystring ? "?" + request.querystring : ""}`;
+
+  // Parse the query string into an object for proper handling by SignatureV4
+  const queryParams = {};
+  if (request.querystring) {
+    const searchParams = new URLSearchParams(request.querystring);
+    for (const [key, value] of searchParams.entries()) {
+      if (queryParams[key] === undefined) {
+        // First occurrence of this key
+        queryParams[key] = value;
+      } else if (Array.isArray(queryParams[key])) {
+        // Already an array, just push
+        queryParams[key].push(value);
+      } else {
+        // Second occurrence, convert to array
+        queryParams[key] = [queryParams[key], value];
+      }
+    }
+  }
 
   const req = new HttpRequest({
     method: request.method,
     protocol: "https:",
     hostname: host,
-    path,
+    path: request.uri,
+    query: queryParams,
     headers: Object.values(headers).map(headers => headers[0]).reduce((previousValue, newValue) => ({ ...previousValue, ...{ [newValue.key]: newValue.value } }), {}),
     body: request.body ? Buffer.from(request.body.data, request.body.encoding) : undefined,
   });
