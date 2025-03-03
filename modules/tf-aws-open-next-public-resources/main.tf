@@ -551,7 +551,7 @@ resource "aws_cloudfront_response_headers_policy" "response_headers" {
   }
 
   dynamic "custom_headers_config" {
-    for_each = try(var.response_headers.custom_headers_config, null) != null ? [true] : []
+    for_each = length(var.response_headers.custom_headers_config) > 0 ? [true] : []
 
     content {
       dynamic "items" {
