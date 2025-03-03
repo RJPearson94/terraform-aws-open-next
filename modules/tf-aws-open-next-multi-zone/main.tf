@@ -151,6 +151,7 @@ module "website_zone" {
   content_types                        = try(coalesce(each.value.content_types, var.content_types), null)
   layers                               = try(coalesce(each.value.layers, var.layers), null)
   origin_timeouts                      = try(coalesce(each.value.origin_timeouts, var.origin_timeouts), null)
+  xray_tracing                         = try(coalesce(each.value.xray_tracing, var.xray_tracing), null)
 
   warmer_function             = try(coalesce(each.value.warmer_function, var.warmer_function), null)
   server_function             = try(coalesce(each.value.server_function, var.server_function), null)

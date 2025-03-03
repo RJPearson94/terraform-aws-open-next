@@ -438,6 +438,7 @@ module "server_function" {
   cloudwatch_log = local.log_groups["default_server"] != null ? merge(local.log_groups["default_server"], local.log_groups["default_server"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.server_function.iam, var.iam), null)
   vpc            = try(coalesce(var.server_function.vpc, var.vpc), null)
+  xray_tracing   = try(coalesce(var.server_function.xray_tracing, var.xray_tracing), null)
 
   prefix = var.prefix
   suffix = var.suffix
@@ -517,6 +518,7 @@ module "additional_server_function" {
   cloudwatch_log = local.log_groups[each.key] != null ? merge(local.log_groups[each.key], local.log_groups[each.key].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(var.additional_server_functions.function_overrides[each.key].iam, var.additional_server_functions.iam)
   vpc            = try(var.additional_server_functions.function_overrides[each.key].vpc, var.additional_server_functions.vpc)
+  xray_tracing   = try(coalesce(try(var.additional_server_functions.function_overrides[each.key].xray_tracing, null), try(var.additional_server_functions.xray_tracing, null), try(var.xray_tracing, null)), null)
 
   prefix = var.prefix
   suffix = var.suffix
@@ -615,6 +617,7 @@ module "warmer_function" {
   cloudwatch_log = local.log_groups["warmer"] != null ? merge(local.log_groups["warmer"], local.log_groups["warmer"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.warmer_function.iam, var.iam), null)
   vpc            = try(coalesce(var.warmer_function.vpc, var.vpc), null)
+  xray_tracing   = try(coalesce(var.warmer_function.xray_tracing, var.xray_tracing), null)
 
   prefix = var.prefix
   suffix = var.suffix
@@ -679,6 +682,7 @@ module "image_optimisation_function" {
   iam            = try(coalesce(var.image_optimisation_function.iam, var.iam), null)
   vpc            = try(coalesce(var.image_optimisation_function.vpc, var.vpc), null)
   layers         = try(coalesce(var.image_optimisation_function.layers, var.layers), null)
+  xray_tracing   = try(coalesce(var.image_optimisation_function.xray_tracing, var.xray_tracing), null)
 
   prefix = var.prefix
   suffix = var.suffix
@@ -757,6 +761,7 @@ module "revalidation_function" {
   iam            = try(coalesce(var.revalidation_function.iam, var.iam), null)
   vpc            = try(coalesce(var.revalidation_function.vpc, var.vpc), null)
   layers         = try(coalesce(var.revalidation_function.layers, var.layers), null)
+  xray_tracing   = try(coalesce(var.revalidation_function.xray_tracing, var.xray_tracing), null)
 
   prefix = var.prefix
   suffix = var.suffix

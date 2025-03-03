@@ -101,6 +101,15 @@ EOF
   default = {}
 }
 
+variable "xray_tracing" {
+  description = "The default configuration for AWS tracing on all functions. This can be overridden for each function."
+  type = object({
+    enable = optional(bool, false),
+    mode   = optional(string, "Active")
+  })
+  default = {}
+}
+
 variable "vpc" {
   description = "The default VPC configuration for the lambda resources. This can be overridden for each function."
   type = object({
@@ -211,6 +220,10 @@ EOF
       name              = optional(string)
       log_group_class   = optional(string)
       skip_destroy      = optional(bool)
+    }))
+    xray_tracing = optional(object({
+      enable = optional(bool, false),
+      mode   = optional(string, "Active")
     }))
     timeouts = optional(object({
       create = optional(string)
@@ -379,6 +392,10 @@ EOF
       log_group_class   = optional(string)
       skip_destroy      = optional(bool)
     }))
+    xray_tracing = optional(object({
+      enable = optional(bool, false),
+      mode   = optional(string, "Active")
+    }))
     origin_timeouts = optional(object({
       keepalive_timeout   = optional(number)
       read_timeout        = optional(number)
@@ -456,6 +473,10 @@ EOF
       log_group_class   = optional(string)
       skip_destroy      = optional(bool)
     }))
+    xray_tracing = optional(object({
+      enable = optional(bool, false),
+      mode   = optional(string, "Active")
+    }))
     origin_timeouts = optional(object({
       keepalive_timeout   = optional(number)
       read_timeout        = optional(number)
@@ -517,6 +538,10 @@ EOF
         name              = optional(string)
         log_group_class   = optional(string)
         skip_destroy      = optional(bool)
+      }))
+      xray_tracing = optional(object({
+        enable = optional(bool, false),
+        mode   = optional(string, "Active")
       }))
       origin_timeouts = optional(object({
         keepalive_timeout   = optional(number)
@@ -604,6 +629,10 @@ EOF
       log_group_class   = optional(string)
       skip_destroy      = optional(bool)
     }))
+    xray_tracing = optional(object({
+      enable = optional(bool, false),
+      mode   = optional(string, "Active")
+    }))
     origin_timeouts = optional(object({
       keepalive_timeout   = optional(number)
       read_timeout        = optional(number)
@@ -677,6 +706,10 @@ EOF
       name              = optional(string)
       log_group_class   = optional(string)
       skip_destroy      = optional(bool)
+    }))
+    xray_tracing = optional(object({
+      enable = optional(bool, false),
+      mode   = optional(string, "Active")
     }))
     timeouts = optional(object({
       create = optional(string)

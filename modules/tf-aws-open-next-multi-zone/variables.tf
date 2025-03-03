@@ -100,6 +100,16 @@ EOF
   default = {}
 }
 
+variable "xray_tracing" {
+  description = "The default configuration for AWS tracing on all functions. This can be overridden for each zone and each function"
+  type = object({
+    enable = optional(bool, false),
+    mode   = optional(string, "Active")
+  })
+  default = {}
+}
+
+
 variable "vpc" {
   description = "The default VPC configuration for the lambda resources. This can be overridden for each zone and each function"
   type = object({
@@ -213,6 +223,10 @@ EOF
       name              = optional(string)
       log_group_class   = optional(string)
       skip_destroy      = optional(bool)
+    }))
+    xray_tracing = optional(object({
+      enable = optional(bool, false),
+      mode   = optional(string, "Active")
     }))
     timeouts = optional(object({
       create = optional(string)
@@ -391,6 +405,10 @@ EOF
       connection_attempts = optional(number)
       connection_timeout  = optional(number)
     }))
+    xray_tracing = optional(object({
+      enable = optional(bool, false),
+      mode   = optional(string, "Active")
+    }))
     timeouts = optional(object({
       create = optional(string)
       update = optional(string)
@@ -465,6 +483,10 @@ EOF
       connection_attempts = optional(number)
       connection_timeout  = optional(number)
     }))
+    xray_tracing = optional(object({
+      enable = optional(bool, false),
+      mode   = optional(string, "Active")
+    }))
     timeouts = optional(object({
       create = optional(string)
       update = optional(string)
@@ -526,6 +548,10 @@ EOF
         read_timeout        = optional(number)
         connection_attempts = optional(number)
         connection_timeout  = optional(number)
+      }))
+      xray_tracing = optional(object({
+        enable = optional(bool, false),
+        mode   = optional(string, "Active")
       }))
       timeouts = optional(object({
         create = optional(string)
@@ -609,6 +635,10 @@ EOF
       connection_attempts = optional(number)
       connection_timeout  = optional(number)
     }))
+    xray_tracing = optional(object({
+      enable = optional(bool, false),
+      mode   = optional(string, "Active")
+    }))
     timeouts = optional(object({
       create = optional(string)
       update = optional(string)
@@ -673,6 +703,10 @@ EOF
       name              = optional(string)
       log_group_class   = optional(string)
       skip_destroy      = optional(bool)
+    }))
+    xray_tracing = optional(object({
+      enable = optional(bool, false),
+      mode   = optional(string, "Active")
     }))
     timeouts = optional(object({
       create = optional(string)
@@ -1490,6 +1524,10 @@ variable "zones" {
       })
       default = optional(string, "binary/octet-stream")
     }))
+    xray_tracing = optional(object({
+      enable = optional(bool, false),
+      mode   = optional(string, "Active")
+    }))
     warmer_function = optional(object({
       enabled = optional(bool, false)
       warm_staging = optional(object({
@@ -1540,6 +1578,10 @@ variable "zones" {
         name              = optional(string)
         log_group_class   = optional(string)
         skip_destroy      = optional(bool)
+      }))
+      xray_tracing = optional(object({
+        enable = optional(bool, false),
+        mode   = optional(string, "Active")
       }))
       timeouts = optional(object({
         create = optional(string)
@@ -1653,6 +1695,10 @@ variable "zones" {
         connection_attempts = optional(number)
         connection_timeout  = optional(number)
       }))
+      xray_tracing = optional(object({
+        enable = optional(bool, false),
+        mode   = optional(string, "Active")
+      }))
       timeouts = optional(object({
         create = optional(string)
         update = optional(string)
@@ -1703,6 +1749,10 @@ variable "zones" {
         read_timeout        = optional(number)
         connection_attempts = optional(number)
         connection_timeout  = optional(number)
+      }))
+      xray_tracing = optional(object({
+        enable = optional(bool, false),
+        mode   = optional(string, "Active")
       }))
       timeouts = optional(object({
         create = optional(string)
@@ -1766,6 +1816,10 @@ variable "zones" {
           connection_attempts = optional(number)
           connection_timeout  = optional(number)
         }))
+        xray_tracing = optional(object({
+          enable = optional(bool, false),
+          mode   = optional(string, "Active")
+        }))
         timeouts = optional(object({
           create = optional(string)
           update = optional(string)
@@ -1826,6 +1880,10 @@ variable "zones" {
         connection_attempts = optional(number)
         connection_timeout  = optional(number)
       }))
+      xray_tracing = optional(object({
+        enable = optional(bool, false),
+        mode   = optional(string, "Active")
+      }))
       timeouts = optional(object({
         create = optional(string)
         update = optional(string)
@@ -1875,6 +1933,10 @@ variable "zones" {
         name              = optional(string)
         log_group_class   = optional(string)
         skip_destroy      = optional(bool)
+      }))
+      xray_tracing = optional(object({
+        enable = optional(bool, false),
+        mode   = optional(string, "Active")
       }))
       timeouts = optional(object({
         create = optional(string)
