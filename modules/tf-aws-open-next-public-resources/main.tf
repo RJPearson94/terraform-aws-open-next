@@ -454,6 +454,8 @@ module "auth_function" {
     create = false
   }
 
+  timeouts = var.auth_function.timeouts
+
   providers = {
     aws.iam = aws.iam
   }
