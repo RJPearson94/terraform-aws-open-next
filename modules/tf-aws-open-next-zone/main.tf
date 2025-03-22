@@ -659,7 +659,7 @@ module "image_optimisation_function" {
 
   environment_variables = merge({
     "BUCKET_NAME"       = local.website_bucket_name,
-    "BUCKET_KEY_PREFIX" = module.s3_assets.asset_key_prefix
+    "BUCKET_KEY_PREFIX" = module.s3_assets.origin_asset_path # The base path should be included in the image reference, so the zone will not be addeded to the path
     },
     try(var.image_optimisation_function.static_image_optimisation, false) == true ? {
       "OPENNEXT_STATIC_ETAG" = "true"
