@@ -12,6 +12,14 @@ locals {
   website_bucket_region        = local.should_create_website_bucket ? data.aws_region.current.name : var.website_bucket.region
   website_bucket_domain_name   = local.should_create_website_bucket ? one(aws_s3_bucket.bucket[*].bucket_regional_domain_name) : var.website_bucket.domain_name
 
+  # Ensure bucket name stays within 63 character limit. If name exceeds limit, truncate and add a hash suffix for uniqueness
+  full_website_bucket_name  = "${local.prefix}website-bucket${local.suffix}"
+  valid_website_bucket_name = length(local.full_website_bucket_name) > 63 ? "${substr(local.full_website_bucket_name, 0, 57)}-${substr(sha1(local.full_website_bucket_name), 0, 5)}" : local.full_website_bucket_name
+
+  # Ensure queue name stays within 75 character limit (due to .fifo being counted within the 80 character limit). If name exceeds limit, truncate and add a hash suffix for uniqueness
+  full_queue_name  = "${local.prefix}website-bucket${local.suffix}"
+  valid_queue_name = length(local.full_queue_name) > 75 ? "${substr(local.full_queue_name, 0, 69)}-${substr(sha1(local.full_queue_name), 0, 5)}" : local.full_queue_name
+
   open_next_versions = {
     v2 = can(regex("^v2\\.[0-9x]+\\.[0-9x]+$", var.open_next_version)),
     v3 = can(regex("^v3\\.[0-9x]+\\.[0-9x]+$", var.open_next_version)),
@@ -293,7 +301,7 @@ resource "terraform_data" "update_aliases" {
 
 resource "aws_s3_bucket" "bucket" {
   count         = local.should_create_website_bucket ? 1 : 0
-  bucket        = "${local.prefix}website-bucket${local.suffix}"
+  bucket        = local.valid_website_bucket_name
   force_destroy = var.website_bucket.force_destroy
 }
 
@@ -776,7 +784,7 @@ module "revalidation_function" {
 # SQS
 
 resource "aws_sqs_queue" "revalidation_queue" {
-  name                        = "${local.prefix}isr-queue${local.suffix}.fifo"
+  name                        = "${local.valid_queue_name}.fifo"
   fifo_queue                  = true
   content_based_deduplication = true
 }

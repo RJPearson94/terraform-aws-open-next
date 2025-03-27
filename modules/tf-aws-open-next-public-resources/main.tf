@@ -33,6 +33,10 @@ locals {
   zones      = concat([for zone in var.zones : merge(zone, { path_prefix = "/${coalesce(zone.path, zone.name)}" }) if zone.root == false], [for zone in var.zones : merge(zone, { path_prefix = zone.path != null ? "/${zone.path}" : "" }) if zone.root == true])
   root_zones = [for zone in local.zones : zone if zone.root == true][0]
 
+  # Ensure bucket name stays within 64 character limit. If name exceeds limit, truncate and add a hash suffix for uniqueness
+  full_origin_access_control_name  = "${local.prefix}website-bucket${local.suffix}"
+  valid_origin_access_control_name = length(local.full_origin_access_control_name) > 64 ? "${substr(local.full_origin_access_control_name, 0, 58)}-${substr(sha1(local.full_origin_access_control_name), 0, 5)}" : local.full_origin_access_control_name
+
   ordered_cache_behaviors = concat(
     [
       for custom_error_response in local.custom_error_responses : {
@@ -471,7 +475,7 @@ resource "aws_cloudfront_function" "x_forwarded_host" {
 # CloudFront
 
 resource "aws_cloudfront_origin_access_control" "website_origin_access_control" {
-  name                              = "${local.prefix}website${local.suffix}"
+  name                              = local.valid_origin_access_control_name
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"

@@ -8,6 +8,10 @@ locals {
   alias_names = var.aliases.create ? var.aliases.names : []
 
   has_log_group_per_function = try(var.cloudwatch_log.deployment, "PER_FUNCTION") == "PER_FUNCTION"
+
+  # Ensure IAM role name stays within 64 character limit. If name exceeds limit, truncate and add a hash suffix for uniqueness
+  full_role_name = "${local.prefix}${var.function_name}-role${local.suffix}"
+  role_name = length(local.full_role_name) > 64 ? "${substr(local.full_role_name, 0, 58)}-${substr(sha1(local.full_role_name), 0, 5)}" : local.full_role_name
 }
 
 # Lambda
@@ -131,13 +135,6 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
 }
 
 # IAM
-
-locals {
-  # Ensure IAM role name stays within 64 character limit
-  full_role_name = "${local.prefix}${var.function_name}-role${local.suffix}"
-  # If name exceeds limit, truncate and add a hash suffix for uniqueness
-  role_name = length(local.full_role_name) > 64 ? "${substr(local.full_role_name, 0, 58)}-${substr(sha1(local.full_role_name), 0, 5)}" : local.full_role_name
-}
 
 resource "aws_iam_role" "lambda_iam" {
   name                 = local.role_name
