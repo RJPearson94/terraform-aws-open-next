@@ -132,8 +132,15 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
 
 # IAM
 
+locals {
+  # Ensure IAM role name stays within 64 character limit
+  full_role_name = "${local.prefix}${var.function_name}-role${local.suffix}"
+  # If name exceeds limit, truncate and add a hash suffix for uniqueness
+  role_name = length(local.full_role_name) > 64 ? "${substr(local.full_role_name, 0, 58)}-${substr(sha1(local.full_role_name), 0, 5)}" : local.full_role_name
+}
+
 resource "aws_iam_role" "lambda_iam" {
-  name                 = "${local.prefix}${var.function_name}-role${local.suffix}"
+  name                 = local.role_name
   path                 = try(var.iam.path, null)
   permissions_boundary = try(var.iam.permissions_boundary, null)
 
