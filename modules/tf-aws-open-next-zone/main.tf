@@ -376,7 +376,7 @@ module "edge_function" {
   }
 
   run_at_edge = true
-  runtime     = try(coalesce(try(var.edge_functions.function_overrides[each.key].runtime, null), try(var.edge_functions.runtime, null)), "nodejs20.x")
+  runtime     = try(coalesce(try(var.edge_functions.function_overrides[each.key].runtime, null), try(var.edge_functions.runtime, null)), "nodejs22.x")
   handler     = try(coalesce(try(var.edge_functions.function_overrides[each.key].handler, null), try(var.edge_functions.handler, null)), "handler.handler")
 
   memory_size = try(coalesce(try(var.edge_functions.function_overrides[each.key].memory_size, null), try(var.edge_functions.memory_size, null)), null)

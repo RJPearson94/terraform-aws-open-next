@@ -79,7 +79,7 @@ variable "auth_function" {
         object_version = optional(string)
       }))
     }))
-    runtime     = optional(string, "nodejs20.x")
+    runtime     = optional(string, "nodejs22.x")
     timeout     = optional(number, 10)
     memory_size = optional(number, 256)
     additional_iam_policies = optional(list(object({

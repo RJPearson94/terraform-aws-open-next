@@ -189,7 +189,7 @@ EOF
         object_version = optional(string)
       }))
     }))
-    runtime                          = optional(string, "nodejs20.x")
+    runtime                          = optional(string, "nodejs22.x")
     concurrency                      = optional(number, 20)
     timeout                          = optional(number, 15 * 60) // 15 minutes
     memory_size                      = optional(number, 1024)
@@ -260,7 +260,7 @@ As lambda@edge doesn't support environment variables, the environment variables 
 EOF
 
   type = object({
-    runtime                               = optional(string, "nodejs20.x")
+    runtime                               = optional(string, "nodejs22.x")
     timeout                               = optional(number, 10)
     memory_size                           = optional(number, 512)
     include_open_next_origin_env_variable = optional(bool, true)
@@ -292,7 +292,7 @@ EOF
           object_version = optional(string)
         }))
       }))
-      runtime                               = optional(string, "nodejs20.x")
+      runtime                               = optional(string, "nodejs22.x")
       timeout                               = optional(number, 10)
       memory_size                           = optional(number, 512)
       include_open_next_origin_env_variable = optional(bool, true)
@@ -360,7 +360,7 @@ EOF
       }))
     }))
     enable_streaming                 = optional(bool)
-    runtime                          = optional(string, "nodejs20.x")
+    runtime                          = optional(string, "nodejs22.x")
     backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
     timeout                          = optional(number, 10)
     memory_size                      = optional(number, 1024)
@@ -436,7 +436,7 @@ EOF
 
   type = object({
     enable_streaming                 = optional(bool)
-    runtime                          = optional(string, "nodejs20.x")
+    runtime                          = optional(string, "nodejs22.x")
     backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
     timeout                          = optional(number, 10)
     memory_size                      = optional(number, 1024)
@@ -502,7 +502,7 @@ EOF
         }))
       }))
       enable_streaming                 = optional(bool)
-      runtime                          = optional(string, "nodejs20.x")
+      runtime                          = optional(string, "nodejs22.x")
       backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
       timeout                          = optional(number, 10)
       memory_size                      = optional(number, 1024)
@@ -596,7 +596,7 @@ EOF
         object_version = optional(string)
       }))
     }))
-    runtime                          = optional(string, "nodejs20.x")
+    runtime                          = optional(string, "nodejs22.x")
     backend_deployment_type          = optional(string, "REGIONAL_LAMBDA")
     timeout                          = optional(number, 25)
     memory_size                      = optional(number, 1536)
@@ -676,7 +676,7 @@ EOF
         object_version = optional(string)
       }))
     }))
-    runtime                          = optional(string, "nodejs20.x")
+    runtime                          = optional(string, "nodejs22.x")
     timeout                          = optional(number, 25)
     memory_size                      = optional(number, 1536)
     additional_environment_variables = optional(map(string), {})
@@ -869,7 +869,7 @@ EOF
           object_version = optional(string)
         }))
       }))
-      runtime     = optional(string, "nodejs20.x")
+      runtime     = optional(string, "nodejs22.x")
       timeout     = optional(number, 10)
       memory_size = optional(number, 256)
       additional_iam_policies = optional(list(object({
