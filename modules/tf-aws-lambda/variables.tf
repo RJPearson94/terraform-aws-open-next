@@ -204,3 +204,27 @@ variable "scripts" {
   })
   default = {}
 }
+
+variable "lambda_function_tags" {
+  description = "Tags to apply to the lambda function"
+  type        = map(string)
+  default     = null
+}
+
+variable "lambda_log_group_tags" {
+  description = "Tags to apply to the lambda log group"
+  type        = map(string)
+  default     = null
+}
+
+variable "iam_role_tags" {
+  description = "Tags to apply to the IAM role"
+  type        = map(string)
+  default     = null
+}
+
+variable "cloudwatch_event_rule_tags" {
+  description = "Tags to apply to the cloudwatch event rule"
+  type        = map(string)
+  default     = null
+}

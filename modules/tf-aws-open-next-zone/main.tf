@@ -799,6 +799,8 @@ resource "aws_dynamodb_table" "isr_table" {
   hash_key  = "tag"
   range_key = "path"
 
+  tags = var.default_tags
+
   attribute {
     name = "tag"
     type = "S"
@@ -848,6 +850,8 @@ resource "aws_cloudwatch_log_group" "log_group" {
   retention_in_days = try(var.cloudwatch_log.retention_in_days, null)
   log_group_class   = try(var.cloudwatch_log.log_group_class, null)
   skip_destroy      = try(var.cloudwatch_log.skip_destroy, null)
+
+  tags = var.default_tags
 
   lifecycle {
     precondition {

@@ -31,6 +31,8 @@ resource "aws_lambda_function" "lambda_function" {
   architectures = var.run_at_edge == false ? [var.architecture] : ["x86_64"]
   publish       = var.publish
 
+  tags = var.lambda_function_tags
+
   dynamic "environment" {
     for_each = length(var.environment_variables) > 0 ? [var.environment_variables] : []
     content {
@@ -128,6 +130,8 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   retention_in_days = try(var.cloudwatch_log.retention_in_days, null)
   log_group_class   = try(var.cloudwatch_log.log_group_class, null)
   skip_destroy      = try(var.cloudwatch_log.skip_destroy, null)
+
+  tags = var.lambda_log_group_tags
 }
 
 # IAM
@@ -159,6 +163,8 @@ resource "aws_iam_role" "lambda_iam" {
   })
 
   provider = aws.iam
+
+  tags = var.iam_role_tags
 }
 
 resource "aws_iam_policy" "lambda_policy" {
@@ -242,6 +248,8 @@ resource "aws_cloudwatch_event_rule" "cron" {
 
   name                = "${local.prefix}${var.function_name}-cron${local.suffix}"
   schedule_expression = var.schedule
+
+  tags = var.cloudwatch_event_rule_tags
 }
 
 resource "aws_cloudwatch_event_target" "trigger_lambda_on_schedule" {
