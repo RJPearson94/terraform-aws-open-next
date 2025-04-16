@@ -963,3 +963,9 @@ variable "scripts" {
   })
   default = {}
 }
+
+variable "realtime_log_config_arn" {
+  description = "Configuration of realtime log config for cloudfront"
+  type = string
+  default = null
+}

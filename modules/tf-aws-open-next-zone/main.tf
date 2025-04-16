@@ -252,6 +252,7 @@ module "public_resources" {
   lambda_url_oac            = var.distribution.lambda_url_oac
   cache_policy              = var.distribution.cache_policy
   response_headers          = var.distribution.response_headers
+  realtime_log_config_arn   = var.distribution.realtime_log_config_arn
 
   behaviours            = local.zone_behaviours
   waf                   = var.waf

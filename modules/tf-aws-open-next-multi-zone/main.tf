@@ -68,6 +68,7 @@ module "public_resources" {
   auth_function             = var.distribution.auth_function
   cache_policy              = var.distribution.cache_policy
   response_headers          = var.distribution.response_headers
+  realtime_log_config_arn   = var.distribution.realtime_log_config_arn
 
   behaviours = merge(var.behaviours, {
     static_assets      = var.behaviours.static_assets == null ? local.merged_static_assets : merge(var.behaviours.static_assets, local.merged_static_assets)

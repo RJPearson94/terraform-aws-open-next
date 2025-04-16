@@ -842,6 +842,7 @@ EOF
       runtime = optional(string)
       code    = optional(string)
     }), {})
+    realtime_log_config_arn = optional(string, null)
     auth_function = optional(object({
       deployment    = optional(string, "NONE")
       qualified_arn = optional(string)
