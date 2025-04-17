@@ -969,6 +969,7 @@ variable "behaviours" {
         cache_policy_id            = optional(string)
         origin_request_policy_id   = optional(string)
         response_headers_policy_id = optional(string)
+        realtime_log_config_arn    = optional(string)
         compress                   = optional(bool)
         viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
@@ -1024,6 +1025,7 @@ variable "behaviours" {
         cache_policy_id            = optional(string)
         origin_request_policy_id   = optional(string)
         response_headers_policy_id = optional(string)
+        realtime_log_config_arn    = optional(string)
         compress                   = optional(bool)
         viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
@@ -1048,6 +1050,7 @@ variable "behaviours" {
       cache_policy_id            = optional(string)
       origin_request_policy_id   = optional(string)
       response_headers_policy_id = optional(string)
+      realtime_log_config_arn    = optional(string)
       compress                   = optional(bool)
       viewer_protocol_policy     = optional(string)
       viewer_request = optional(object({
@@ -1077,6 +1080,7 @@ variable "behaviours" {
         cache_policy_id            = optional(string)
         origin_request_policy_id   = optional(string)
         response_headers_policy_id = optional(string)
+        realtime_log_config_arn    = optional(string)
         compress                   = optional(bool)
         viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
@@ -1101,6 +1105,7 @@ variable "behaviours" {
       cache_policy_id            = optional(string)
       origin_request_policy_id   = optional(string)
       response_headers_policy_id = optional(string)
+      realtime_log_config_arn    = optional(string)
       compress                   = optional(bool)
       viewer_protocol_policy     = optional(string)
       viewer_request = optional(object({
@@ -1133,6 +1138,7 @@ variable "behaviours" {
         cache_policy_id            = optional(string)
         origin_request_policy_id   = optional(string)
         response_headers_policy_id = optional(string)
+        realtime_log_config_arn    = optional(string)
         compress                   = optional(bool)
         viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
@@ -1157,6 +1163,7 @@ variable "behaviours" {
       cache_policy_id            = optional(string)
       origin_request_policy_id   = optional(string)
       response_headers_policy_id = optional(string)
+      realtime_log_config_arn    = optional(string)
       compress                   = optional(bool)
       viewer_protocol_policy     = optional(string)
       viewer_request = optional(object({
@@ -1186,6 +1193,7 @@ variable "behaviours" {
         cache_policy_id            = optional(string)
         origin_request_policy_id   = optional(string)
         response_headers_policy_id = optional(string)
+        realtime_log_config_arn    = optional(string)
         compress                   = optional(bool)
         viewer_protocol_policy     = optional(string)
         viewer_request = optional(object({
@@ -1210,6 +1218,7 @@ variable "behaviours" {
       cache_policy_id            = optional(string)
       origin_request_policy_id   = optional(string)
       response_headers_policy_id = optional(string)
+      realtime_log_config_arn    = optional(string)
       compress                   = optional(bool)
       viewer_protocol_policy     = optional(string)
       viewer_request = optional(object({
