@@ -399,7 +399,6 @@ locals {
 
   temp_aliases = var.domain_config != null ? concat(formatlist(join(".", compact([var.domain_config.sub_domain, "%s"])), distinct([for hosted_zone in var.domain_config.hosted_zones : hosted_zone.name]))) : []
   aliases      = try(var.domain_config.include_www, false) == true ? flatten([for alias in local.temp_aliases : [alias, "www.${alias}"]]...) : local.temp_aliases
-  realtime_log_config_arn = var.realtime_log_config_arn
   temp_route53_entries = try(var.domain_config.create_route53_entries, false) == true ? { for hosted_zone in var.domain_config.hosted_zones : join("-", compact([hosted_zone.name, hosted_zone.id, hosted_zone.private_zone])) => {
     name            = join(".", compact([var.domain_config.sub_domain, hosted_zone.name]))
     zone_id         = coalesce(hosted_zone.id, data.aws_route53_zone.hosted_zone[join("-", compact([hosted_zone.name, hosted_zone.private_zone]))].zone_id)
@@ -808,7 +807,6 @@ resource "aws_cloudfront_distribution" "website_distribution" {
 
   aliases = local.aliases
 
-  realtime_log_config_arn = local.realtime_log_config_arn
 }
 
 # We have 2 different resources as Terraform doesn't currently support having dynamic lifecycle rules
@@ -961,8 +959,6 @@ resource "aws_cloudfront_distribution" "production_distribution" {
   }
 
   aliases = local.aliases
-
-  realtime_log_config_arn = local.realtime_log_config_arn
 
   lifecycle {
     ignore_changes = [origin, ordered_cache_behavior, default_cache_behavior, custom_error_response]
@@ -1124,8 +1120,6 @@ resource "aws_cloudfront_distribution" "staging_distribution" {
   }
 
   aliases = local.aliases
-
-  realtime_log_config_arn = local.realtime_log_config_arn
 }
 
 resource "aws_cloudfront_continuous_deployment_policy" "continuous_deployment_policy" {
