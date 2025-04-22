@@ -8,7 +8,7 @@ locals {
 
   create_cache_policy = try(var.cache_policy.deployment, "CREATE") == "CREATE"
   cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : try(var.cache_policy.id, null)
-
+  
   create_response_headers    = try(var.response_headers.deployment, "NONE") == "CREATE"
   response_headers_policy_id = local.create_response_headers ? one(aws_cloudfront_response_headers_policy.response_headers[*].id) : try(var.response_headers.id, null)
 
@@ -46,6 +46,7 @@ locals {
         target_origin_id = join("-", compact([custom_error_response.error_code, local.s3_origin_id]))
 
         cache_policy_id          = coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].cache_policy_id, null), try(var.behaviours.custom_error_responses.cache_policy_id, null), data.aws_cloudfront_cache_policy.caching_optimized.id)
+        realtime_log_config_arn  = coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].realtime_log_config_arn, null), try(var.behaviours.custom_error_responses.realtime_log_config_arn, null))
         origin_request_policy_id = try(coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].origin_request_policy_id, null), try(var.behaviours.custom_error_responses.origin_request_policy_id, null)), null)
 
         response_headers_policy_id = try(coalesce(try(var.behaviours.custom_error_responses.path_overrides[custom_error_response.path_pattern].response_headers_policy_id, null), try(var.behaviours.custom_error_responses.response_headers_policy_id, null), local.response_headers_policy_id), null)
@@ -75,6 +76,7 @@ locals {
           target_origin_id = join("-", compact([zone.name, local.image_optimisation_function_origin]))
 
           cache_policy_id          = coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour.formatted].cache_policy_id, null), try(var.behaviours.image_optimisation.zone_overrides[zone.name].path_overrides[image_optimisation_behaviour.original].cache_policy_id, null), try(var.behaviours.image_optimisation.zone_overrides[zone.name].cache_policy_id, null), try(var.behaviours.image_optimisation.cache_policy_id, null), local.cache_policy_id)
+          realtime_log_config_arn  = coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour.formatted].realtime_log_config_arn, null), try(var.behaviours.image_optimisation.zone_overrides[zone.name].path_overrides[image_optimisation_behaviour.original].realtime_log_config_arn, null), try(var.behaviours.image_optimisation.zone_overrides[zone.name].realtime_log_config_arn, null), try(var.behaviours.image_optimisation.realtime_log_config_arn, null))
           origin_request_policy_id = coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour.formatted].origin_request_policy_id, null), try(var.behaviours.image_optimisation.zone_overrides[zone.name].path_overrides[image_optimisation_behaviour.original].origin_request_policy_id, null), try(var.behaviours.image_optimisation.zone_overrides[zone.name].origin_request_policy_id, null), try(var.behaviours.image_optimisation.origin_request_policy_id, null), data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id)
 
           response_headers_policy_id = try(coalesce(try(var.behaviours.image_optimisation.path_overrides[image_optimisation_behaviour.formatted].response_headers_policy_id, null), try(var.behaviours.image_optimisation.zone_overrides[zone.name].path_overrides[image_optimisation_behaviour.original].response_headers_policy_id, null), try(var.behaviours.image_optimisation.zone_overrides[zone.name].response_headers_policy_id, null), try(var.behaviours.image_optimisation.response_headers_policy_id, null), local.response_headers_policy_id), null)
@@ -101,6 +103,7 @@ locals {
           target_origin_id = lookup(zone.origins, name, null) == null ? join("-", compact([zone.name, local.s3_origin_id])) : join("-", compact([zone.name, "${name}-function"]))
 
           cache_policy_id          = coalesce(try(origin.path_overrides[additional_origin_behaviour].cache_policy_id, null), try(origin.cache_policy_id, null), local.cache_policy_id)
+          realtime_log_config_arn  = coalesce(try(origin.path_overrides[additional_origin_behaviour].realtime_log_config_arn, null), try(origin.realtime_log_config_arn, null))
           origin_request_policy_id = coalesce(try(origin.path_overrides[additional_origin_behaviour].origin_request_policy_id, null), try(origin.origin_request_policy_id, null), data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id)
 
           response_headers_policy_id = try(coalesce(try(origin.path_overrides[additional_origin_behaviour].response_headers_policy_id, null), try(origin.response_headers_policy_id, null), local.response_headers_policy_id), null)
@@ -128,6 +131,7 @@ locals {
           target_origin_id = lookup(zone.origins, "server", null) == null ? join("-", compact([zone.name, local.s3_origin_id])) : join("-", compact([zone.name, local.server_function_origin]))
 
           cache_policy_id          = coalesce(try(var.behaviours.server.path_overrides[server_behaviour.formatted].cache_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].path_overrides[server_behaviour.original].cache_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].cache_policy_id, null), try(var.behaviours.server.cache_policy_id, null), local.cache_policy_id)
+          realtime_log_config_arn  = coalesce(try(var.behaviours.server.path_overrides[server_behaviour.formatted].realtime_log_config_arn, null), try(var.behaviours.server.zone_overrides[zone.name].path_overrides[server_behaviour.original].realtime_log_config_arn, null), try(var.behaviours.server.zone_overrides[zone.name].realtime_log_config_arn, null), try(var.behaviours.server.realtime_log_config_arn, null))
           origin_request_policy_id = coalesce(try(var.behaviours.server.path_overrides[server_behaviour.formatted].origin_request_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].path_overrides[server_behaviour.original].origin_request_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].origin_request_policy_id, null), try(var.behaviours.server.origin_request_policy_id, null), data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id)
 
           response_headers_policy_id = try(coalesce(try(var.behaviours.server.path_overrides[server_behaviour.formatted].response_headers_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].path_overrides[server_behaviour.original].response_headers_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].response_headers_policy_id, null), try(var.behaviours.server.response_headers_policy_id, null), local.response_headers_policy_id), null)
@@ -154,6 +158,7 @@ locals {
           target_origin_id = join("-", compact([zone.name, local.s3_origin_id]))
 
           cache_policy_id          = coalesce(try(var.behaviours.static_assets.path_overrides[static_assets_behaviour.formatted].cache_policy_id, null), try(var.behaviours.static_assets.zone_overrides[zone.name].path_overrides[static_assets_behaviour.original].cache_policy_id, null), try(var.behaviours.static_assets.zone_overrides[zone.name].cache_policy_id, null), try(var.behaviours.static_assets.cache_policy_id, null), data.aws_cloudfront_cache_policy.caching_optimized.id)
+          realtime_log_config_arn  = coalesce(try(var.behaviours.static_assets.path_overrides[static_assets_behaviour.formatted].realtime_log_config_arn, null), try(var.behaviours.static_assets.zone_overrides[zone.name].path_overrides[static_assets_behaviour.original].realtime_log_config_arn, null), try(var.behaviours.static_assets.zone_overrides[zone.name].realtime_log_config_arn, null), try(var.behaviours.static_assets.realtime_log_config_arn, null))
           origin_request_policy_id = try(coalesce(try(var.behaviours.static_assets.path_overrides[static_assets_behaviour.formatted].origin_request_policy_id, null), try(var.behaviours.static_assets.zone_overrides[zone.name].path_overrides[static_assets_behaviour.original].origin_request_policy_id, null), try(var.behaviours.static_assets.zone_overrides[zone.name].origin_request_policy_id, null), try(var.behaviours.static_assets.origin_request_policy_id, null)), null)
 
           response_headers_policy_id = try(coalesce(try(var.behaviours.static_assets.path_overrides[static_assets_behaviour.formatted].response_headers_policy_id, null), try(var.behaviours.static_assets.zone_overrides[zone.name].path_overrides[static_assets_behaviour.original].response_headers_policy_id, null), try(var.behaviours.static_assets.zone_overrides[zone.name].response_headers_policy_id, null), try(var.behaviours.static_assets.response_headers_policy_id, null), local.response_headers_policy_id), null)
@@ -181,6 +186,7 @@ locals {
           target_origin_id = lookup(zone.origins, "server", null) == null ? join("-", compact([zone.name, local.s3_origin_id])) : join("-", compact([zone.name, local.server_function_origin]))
 
           cache_policy_id          = coalesce(try(var.behaviours.server.path_overrides[server_behaviour.formatted].cache_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].path_overrides[server_behaviour.original].cache_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].cache_policy_id, null), try(var.behaviours.server.cache_policy_id, null), local.cache_policy_id)
+          realtime_log_config_arn  = coalesce(try(var.behaviours.server.path_overrides[server_behaviour.formatted].realtime_log_config_arn, null), try(var.behaviours.server.zone_overrides[zone.name].path_overrides[server_behaviour.original].realtime_log_config_arn, null), try(var.behaviours.server.zone_overrides[zone.name].realtime_log_config_arn, null), try(var.behaviours.server.realtime_log_config_arn, null))
           origin_request_policy_id = coalesce(try(var.behaviours.server.path_overrides[server_behaviour.formatted].origin_request_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].path_overrides[server_behaviour.original].origin_request_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].origin_request_policy_id, null), try(var.behaviours.server.origin_request_policy_id, null), data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id)
 
           response_headers_policy_id = try(coalesce(try(var.behaviours.server.path_overrides[server_behaviour.formatted].response_headers_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].path_overrides[server_behaviour.original].response_headers_policy_id, null), try(var.behaviours.server.zone_overrides[zone.name].response_headers_policy_id, null), try(var.behaviours.server.response_headers_policy_id, null), local.response_headers_policy_id), null)
@@ -711,6 +717,7 @@ resource "aws_cloudfront_distribution" "website_distribution" {
       target_origin_id = ordered_cache_behavior.value.target_origin_id
 
       cache_policy_id          = ordered_cache_behavior.value.cache_policy_id
+      realtime_log_config_arn  = ordered_cache_behavior.value.realtime_log_config_arn
       origin_request_policy_id = ordered_cache_behavior.value.origin_request_policy_id
 
       response_headers_policy_id = ordered_cache_behavior.value.response_headers_policy_id
@@ -748,6 +755,7 @@ resource "aws_cloudfront_distribution" "website_distribution" {
       target_origin_id = default_cache_behavior.value.target_origin_id
 
       cache_policy_id          = default_cache_behavior.value.cache_policy_id
+      realtime_log_config_arn  = default_cache_behavior.value.realtime_log_config_arn
       origin_request_policy_id = default_cache_behavior.value.origin_request_policy_id
 
       response_headers_policy_id = default_cache_behavior.value.response_headers_policy_id
@@ -864,6 +872,7 @@ resource "aws_cloudfront_distribution" "production_distribution" {
       target_origin_id = ordered_cache_behavior.value.target_origin_id
 
       cache_policy_id          = ordered_cache_behavior.value.cache_policy_id
+      realtime_log_config_arn  = ordered_cache_behavior.value.realtime_log_config_arn
       origin_request_policy_id = ordered_cache_behavior.value.origin_request_policy_id
 
       response_headers_policy_id = ordered_cache_behavior.value.response_headers_policy_id
@@ -901,6 +910,7 @@ resource "aws_cloudfront_distribution" "production_distribution" {
       target_origin_id = default_cache_behavior.value.target_origin_id
 
       cache_policy_id          = default_cache_behavior.value.cache_policy_id
+      realtime_log_config_arn  = default_cache_behavior.value.realtime_log_config_arn
       origin_request_policy_id = default_cache_behavior.value.origin_request_policy_id
 
       response_headers_policy_id = default_cache_behavior.value.response_headers_policy_id
@@ -1019,6 +1029,7 @@ resource "aws_cloudfront_distribution" "staging_distribution" {
       target_origin_id = ordered_cache_behavior.value.target_origin_id
 
       cache_policy_id          = ordered_cache_behavior.value.cache_policy_id
+      realtime_log_config_arn  = ordered_cache_behavior.value.realtime_log_config_arn
       origin_request_policy_id = ordered_cache_behavior.value.origin_request_policy_id
 
       response_headers_policy_id = ordered_cache_behavior.value.response_headers_policy_id
@@ -1056,6 +1067,7 @@ resource "aws_cloudfront_distribution" "staging_distribution" {
       target_origin_id = default_cache_behavior.value.target_origin_id
 
       cache_policy_id          = default_cache_behavior.value.cache_policy_id
+      realtime_log_config_arn  = default_cache_behavior.value.realtime_log_config_arn
       origin_request_policy_id = default_cache_behavior.value.origin_request_policy_id
 
       response_headers_policy_id = default_cache_behavior.value.response_headers_policy_id
