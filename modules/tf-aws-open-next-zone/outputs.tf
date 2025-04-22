@@ -13,6 +13,11 @@ output "bucket_arn" {
   value       = local.should_create_website_bucket ? one(aws_s3_bucket.bucket[*].arn) : null
 }
 
+output "server_function_arn" {
+  description = "The ARN of the default lambda function"
+  value       = module.server_function.arn
+}
+
 output "zone_config" {
   description = "The zone config"
   value       = local.zone
