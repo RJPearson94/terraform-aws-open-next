@@ -25,6 +25,11 @@ locals {
   should_create_auth_lambda    = contains(["DETACH", "CREATE"], var.auth_function.deployment) || (var.auth_function.deployment != "USE_EXISTING" && length({ for zone in local.zones : "${zone.name}-distribution" => zone if anytrue([for origin in zone.origins : origin.auth == "AUTH_LAMBDA"]) }) > 0)
   should_create_lambda_url_oac = var.lambda_url_oac.deployment == "CREATE" || length({ for zone in local.zones : "${zone.name}-distribution" => zone if anytrue([for origin in zone.origins : origin.auth == "OAC"]) }) > 0
   auth_lambda_qualified_arn    = var.auth_function.deployment == "USE_EXISTING" ? var.auth_function.qualified_arn : local.should_create_auth_lambda ? one(module.auth_function[*].qualified_arn) : null
+  auth_lambda_iam_policy_resources = local.should_create_auth_lambda ? flatten([
+    for zone in local.zones : concat([
+      for origin_name, origin in zone.origins : [origin.arn, "${origin.arn}:*"] if origin.auth == "AUTH_LAMBDA" && origin.arn != null
+    ])
+  ]) : []
 
   custom_error_responses        = [for custom_error_response in var.custom_error_responses : merge(custom_error_response, { path_pattern = "/${custom_error_response.response_page.behaviour}/*" }) if custom_error_response.response_page != null]
   includes_staging_distribution = var.continuous_deployment.use && var.continuous_deployment.deployment != "NONE"
@@ -439,16 +444,12 @@ module "auth_function" {
   timeout     = var.auth_function.timeout
 
   additional_iam_policies = var.auth_function.additional_iam_policies
-  iam_policy_statements = [
+  iam_policy_statements = local.auth_lambda_iam_policy_resources == [] ? [] : [
     {
       "Action" : [
         "lambda:InvokeFunctionUrl"
       ],
-      "Resource" : flatten([
-        for zone in local.zones : concat([
-          for origin_name, origin in zone.origins : [origin.arn, "${origin.arn}:*"] if origin.auth == "AUTH_LAMBDA" && origin.arn != null
-        ])
-      ]),
+      "Resource" : local.auth_lambda_iam_policy_resources,
       "Effect" : "Allow"
     }
   ]
