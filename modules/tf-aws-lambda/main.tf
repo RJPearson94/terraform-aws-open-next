@@ -11,7 +11,7 @@ locals {
 
   # Ensure IAM role name stays within 64 character limit. If name exceeds limit, truncate and add a hash suffix for uniqueness
   full_role_name = "${local.prefix}${var.function_name}-role${local.suffix}"
-  role_name = length(local.full_role_name) > 64 ? "${substr(local.full_role_name, 0, 58)}-${substr(sha1(local.full_role_name), 0, 5)}" : local.full_role_name
+  role_name      = length(local.full_role_name) > 64 ? "${substr(local.full_role_name, 0, 58)}-${substr(sha1(local.full_role_name), 0, 5)}" : local.full_role_name
 }
 
 # Lambda

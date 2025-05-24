@@ -34,5 +34,6 @@ output "zones" {
 }
 
 output "response_headers_policy_id" {
-  value = one(module.public_resources[*].response_headers_policy_id)
+  description = "The ID of the response header policy"
+  value       = one(module.public_resources[*].response_headers_policy_id)
 }

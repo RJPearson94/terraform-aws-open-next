@@ -8,7 +8,7 @@ locals {
 
   create_cache_policy = try(var.cache_policy.deployment, "CREATE") == "CREATE"
   cache_policy_id     = local.create_cache_policy ? one(aws_cloudfront_cache_policy.cache_policy[*].id) : try(var.cache_policy.id, null)
-  
+
   create_response_headers    = try(var.response_headers.deployment, "NONE") == "CREATE"
   response_headers_policy_id = local.create_response_headers ? one(aws_cloudfront_response_headers_policy.response_headers[*].id) : try(var.response_headers.id, null)
 
