@@ -445,6 +445,7 @@ module "server_function" {
   architecture   = try(coalesce(var.server_function.function_architecture, var.function_architecture), "x86_64")
   cloudwatch_log = local.log_groups["default_server"] != null ? merge(local.log_groups["default_server"], local.log_groups["default_server"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.server_function.iam, var.iam), null)
+  logging_config = try(coalesce(var.server_function.logging_config, var.logging_config), null)
   vpc            = try(coalesce(var.server_function.vpc, var.vpc), null)
   xray_tracing   = try(coalesce(var.server_function.xray_tracing, var.xray_tracing), null)
 
@@ -525,6 +526,7 @@ module "additional_server_function" {
   architecture   = coalesce(try(var.additional_server_functions.function_overrides[each.key].function_architecture, var.additional_server_functions.function_architecture), "x86_64")
   cloudwatch_log = local.log_groups[each.key] != null ? merge(local.log_groups[each.key], local.log_groups[each.key].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(var.additional_server_functions.function_overrides[each.key].iam, var.additional_server_functions.iam)
+  logging_config = try(coalesce(try(var.additional_server_functions.function_overrides[each.key].logging_config, null), try(var.additional_server_functions.logging_config, null), try(var.logging_config, null)), null)
   vpc            = try(var.additional_server_functions.function_overrides[each.key].vpc, var.additional_server_functions.vpc)
   xray_tracing   = try(coalesce(try(var.additional_server_functions.function_overrides[each.key].xray_tracing, null), try(var.additional_server_functions.xray_tracing, null), try(var.xray_tracing, null)), null)
 
@@ -624,6 +626,7 @@ module "warmer_function" {
   architecture   = try(coalesce(var.warmer_function.function_architecture, var.function_architecture), null)
   cloudwatch_log = local.log_groups["warmer"] != null ? merge(local.log_groups["warmer"], local.log_groups["warmer"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.warmer_function.iam, var.iam), null)
+  logging_config = try(coalesce(var.warmer_function.logging_config, var.logging_config), null)
   vpc            = try(coalesce(var.warmer_function.vpc, var.vpc), null)
   xray_tracing   = try(coalesce(var.warmer_function.xray_tracing, var.xray_tracing), null)
 
@@ -688,6 +691,7 @@ module "image_optimisation_function" {
   architecture   = try(coalesce(var.image_optimisation_function.function_architecture, var.function_architecture), null)
   cloudwatch_log = local.log_groups["image_optimisation"] != null ? merge(local.log_groups["image_optimisation"], local.log_groups["image_optimisation"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.image_optimisation_function.iam, var.iam), null)
+  logging_config = try(coalesce(var.image_optimisation_function.logging_config, var.logging_config), null)
   vpc            = try(coalesce(var.image_optimisation_function.vpc, var.vpc), null)
   layers         = try(coalesce(var.image_optimisation_function.layers, var.layers), null)
   xray_tracing   = try(coalesce(var.image_optimisation_function.xray_tracing, var.xray_tracing), null)
@@ -767,6 +771,7 @@ module "revalidation_function" {
   architecture   = try(coalesce(var.revalidation_function.function_architecture, var.function_architecture), null)
   cloudwatch_log = local.log_groups["revalidation"] != null ? merge(local.log_groups["revalidation"], local.log_groups["revalidation"].deployment == "SHARED_PER_ZONE" ? { deployment = "USE_EXISTING", name = one(aws_cloudwatch_log_group.log_group[*].name) } : {}) : null
   iam            = try(coalesce(var.revalidation_function.iam, var.iam), null)
+  logging_config = try(coalesce(var.revalidation_function.logging_config, var.logging_config), null)
   vpc            = try(coalesce(var.revalidation_function.vpc, var.vpc), null)
   layers         = try(coalesce(var.revalidation_function.layers, var.layers), null)
   xray_tracing   = try(coalesce(var.revalidation_function.xray_tracing, var.xray_tracing), null)
