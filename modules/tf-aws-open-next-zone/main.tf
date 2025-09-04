@@ -208,10 +208,10 @@ locals {
       "dynamodb:DeleteItem",
       "dynamodb:DescribeTable",
     ],
-    "Resource" : [
+    "Resource" : local.should_create_isr_tag_mapping? [
       local.isr_tag_mapping_db_arn,
       "${local.isr_tag_mapping_db_arn}/index/*"
-    ],
+    ] : [],
     "Effect" : "Allow"
   }]
 
@@ -843,7 +843,7 @@ resource "terraform_data" "isr_table_item" {
   triggers_replace = [local.staging_alias, md5(jsonencode(each.value))]
 
   provisioner "local-exec" {
-    command = "${coalesce(try(var.scripts.save_item_to_dynamo_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${try(var.scripts.save_item_to_dynamo_script.path, "${path.module}/scripts/save-item-to-dynamo.sh")}"
+    command = "${coalesce(try(var.scripts.save_item_to_dynamo_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${coalesce(try(var.scripts.save_item_to_dynamo_script.path,null), "${path.module}/scripts/save-item-to-dynamo.sh")}"
 
     environment = merge({
       "TABLE_NAME" = local.isr_tag_mapping_db_name

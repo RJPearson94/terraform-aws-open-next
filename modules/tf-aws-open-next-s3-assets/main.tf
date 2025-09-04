@@ -55,7 +55,7 @@ resource "terraform_data" "file_sync" {
   triggers_replace = [var.zone_suffix, var.s3_path_prefix, each.value.md5]
 
   provisioner "local-exec" {
-    command = "${coalesce(try(var.scripts.file_sync_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${try(var.scripts.file_sync_script.path, "${path.module}/scripts/sync-file.sh")}"
+    command = "${coalesce(try(var.scripts.file_sync_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${coalesce(try(var.scripts.file_sync_script.path, null), "${path.module}/scripts/sync-file.sh")}"
 
     environment = merge({
       "BUCKET_NAME"   = var.bucket_name
