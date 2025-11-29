@@ -4,7 +4,7 @@ This module allows you to deploy a next.js website using [Open Next](https://git
 
 The module will allow you to configure the following resources.
 
-![Single Zone Complete](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v3.6.1/docs/diagrams/Single%20Zone.png)
+![Single Zone Complete](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v3.6.2/docs/diagrams/Single%20Zone.png)
 
 The following are optional:
 
@@ -25,15 +25,15 @@ If you need to destroy the Terraform resources, it is recommended that you enabl
 
 ## Continuous deployment
 
-This module supports CloudFront continuous deployment. See the [continuous deployment docs](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.1/docs/continuous-deployments.md) for instructions on how to leverage this capability.
+This module supports CloudFront continuous deployment. See the [continuous deployment docs](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.2/docs/continuous-deployments.md) for instructions on how to leverage this capability.
 
 ## Backend Server Deployment Options
 
-See the [backend server deployment docs](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.1/docs/backend-server-deployments.md) for instructions to see the options.
+See the [backend server deployment docs](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.2/docs/backend-server-deployments.md) for instructions to see the options.
 
 ## Custom Domains
 
-For infomation on managing custom domains see the [domain-config documentation](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.1/docs/domain-config.md)
+For infomation on managing custom domains see the [domain-config documentation](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.2/docs/domain-config.md)
 
 ## Module documentation
 

@@ -8,17 +8,17 @@ This module supports three deployment options:
 
 Independent Zones
 
-![Multi Zone - Independent Zones](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v3.6.1/docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
+![Multi Zone - Independent Zones](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v3.6.2/docs/diagrams/Multi%20Zone%20-%20Independent%20Zones.png)
 
 _Note:_ If you use tools like Terragrunt or CDKTF, you can use the Single Zone module to deploy each zone into its own terraform state
 
 Shared Distribution
 
-![Multi Zone - Shared Distribution](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v3.6.1/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
+![Multi Zone - Shared Distribution](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v3.6.2/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution.png)
 
 Shared Distribution and Bucket
 
-![Multi Zone - Shared Distribution and Bucket](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v3.6.1/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
+![Multi Zone - Shared Distribution and Bucket](https://raw.githubusercontent.com/RJPearson94/terraform-aws-open-next/v3.6.2/docs/diagrams/Multi%20Zone%20-%20Shared%20Distribution%20and%20Bucket.png)
 
 The following are optional:
 
@@ -39,15 +39,15 @@ If you need to destroy the Terraform resources, it is recommended that you enabl
 
 ## Continuous deployment
 
-This module supports CloudFront continuous deployment. See the [continuous deployment docs](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.1/docs/continuous-deployments.md) for instructions on how to leverage this capability.
+This module supports CloudFront continuous deployment. See the [continuous deployment docs](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.2/docs/continuous-deployments.md) for instructions on how to leverage this capability.
 
 ## Backend Server Deployment Options
 
-See the [backend server deployment docs](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.1/docs/backend-server-deployments.md) for instructions to see the options.
+See the [backend server deployment docs](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.2/docs/backend-server-deployments.md) for instructions to see the options.
 
 ## Custom Domains
 
-For infomation on managing custom domains see the [domain-config documentation](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.1/docs/domain-config.md)
+For infomation on managing custom domains see the [domain-config documentation](https://github.com/RJPearson94/terraform-aws-open-next/blob/v3.6.2/docs/domain-config.md)
 
 ## Module documentation
 
