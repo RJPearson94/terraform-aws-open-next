@@ -130,7 +130,7 @@ resource "aws_lambda_permission" "function_url_invoke_permission" {
   action                   = "lambda:InvokeFunction"
   function_name            = aws_lambda_function.lambda_function.function_name
   principal                = "*"
-  invoked_via_function_url = var.function_url.authorization_type
+  invoked_via_function_url = true
 }
 
 # Cloudwatch Logs
