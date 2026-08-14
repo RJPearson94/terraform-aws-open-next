@@ -197,12 +197,12 @@ resource "aws_lambda_permission" "function_url_permission" {
 resource "aws_lambda_permission" "function_invoke_permission" {
   for_each = local.function_url_permission_details
 
-  action                 = "lambda:InvokeFunction"
-  function_name          = each.value.function_name
-  principal              = "cloudfront.amazonaws.com"
-  source_arn             = each.value.distribution_name == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
-  qualifier              = each.value.alias
-  function_url_auth_type = "AWS_IAM"
+  action                   = "lambda:InvokeFunction"
+  function_name            = each.value.function_name
+  principal                = "cloudfront.amazonaws.com"
+  source_arn               = each.value.distribution_name == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
+  qualifier                = each.value.alias
+  invoked_via_function_url = true
 }
 
 resource "aws_s3_bucket_policy" "shared_distribution_bucket_policy" {

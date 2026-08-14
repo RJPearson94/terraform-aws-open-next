@@ -208,7 +208,7 @@ locals {
       "dynamodb:DeleteItem",
       "dynamodb:DescribeTable",
     ],
-    "Resource" : local.should_create_isr_tag_mapping? [
+    "Resource" : local.should_create_isr_tag_mapping ? [
       local.isr_tag_mapping_db_arn,
       "${local.isr_tag_mapping_db_arn}/index/*"
     ] : [],
@@ -491,12 +491,12 @@ resource "aws_lambda_permission" "server_function_url_permission" {
 resource "aws_lambda_permission" "server_function_invoke_permission" {
   for_each = try(local.zone_origins["server"].auth, null) == "OAC" ? local.lambda_permissions : {}
 
-  action                 = "lambda:InvokeFunction"
-  function_name          = module.server_function.name
-  principal              = "cloudfront.amazonaws.com"
-  source_arn             = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
-  qualifier              = each.value.alias
-  function_url_auth_type = "AWS_IAM"
+  action                   = "lambda:InvokeFunction"
+  function_name            = module.server_function.name
+  principal                = "cloudfront.amazonaws.com"
+  source_arn               = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
+  qualifier                = each.value.alias
+  invoked_via_function_url = true
 }
 
 module "additional_server_function" {
@@ -590,12 +590,12 @@ resource "aws_lambda_permission" "additional_server_function_invoke_permission" 
     } if try(var.additional_server_functions.function_overrides[key].backend_deployment_type, var.additional_server_functions.backend_deployment_type) != "REGIONAL_LAMBDA_WITH_OAC"
   ]...)
 
-  action                 = "lambda:InvokeFunction"
-  function_name          = module.additional_server_function[each.value.name].name
-  principal              = "cloudfront.amazonaws.com"
-  source_arn             = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
-  qualifier              = each.value.alias
-  function_url_auth_type = "AWS_IAM"
+  action                   = "lambda:InvokeFunction"
+  function_name            = module.additional_server_function[each.value.name].name
+  principal                = "cloudfront.amazonaws.com"
+  source_arn               = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
+  qualifier                = each.value.alias
+  invoked_via_function_url = true
 }
 
 # Warmer Function
@@ -763,12 +763,12 @@ resource "aws_lambda_permission" "image_optimisation_function_url_permission" {
 resource "aws_lambda_permission" "image_optimisation_function_invoke_permission" {
   for_each = var.image_optimisation_function.create && lookup(local.auth_options, var.image_optimisation_function.backend_deployment_type, null) == "OAC" ? local.lambda_permissions : {}
 
-  action                 = "lambda:InvokeFunction"
-  function_name          = one(module.image_optimisation_function[*].name)
-  principal              = "cloudfront.amazonaws.com"
-  source_arn             = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
-  qualifier              = each.value.alias
-  function_url_auth_type = "AWS_IAM"
+  action                   = "lambda:InvokeFunction"
+  function_name            = one(module.image_optimisation_function[*].name)
+  principal                = "cloudfront.amazonaws.com"
+  source_arn               = each.value.distribution == "production" ? one(module.public_resources[*].arn) : one(module.public_resources[*].staging_arn)
+  qualifier                = each.value.alias
+  invoked_via_function_url = true
 }
 
 # Revalidation Function
@@ -890,7 +890,7 @@ resource "terraform_data" "isr_table_item" {
   triggers_replace = [local.staging_alias, md5(jsonencode(each.value))]
 
   provisioner "local-exec" {
-    command = "${coalesce(try(var.scripts.save_item_to_dynamo_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${coalesce(try(var.scripts.save_item_to_dynamo_script.path,null), "${path.module}/scripts/save-item-to-dynamo.sh")}"
+    command = "${coalesce(try(var.scripts.save_item_to_dynamo_script.interpreter, var.scripts.interpreter, null), "/bin/bash")} ${coalesce(try(var.scripts.save_item_to_dynamo_script.path, null), "${path.module}/scripts/save-item-to-dynamo.sh")}"
 
     environment = merge({
       "TABLE_NAME" = local.isr_tag_mapping_db_name
