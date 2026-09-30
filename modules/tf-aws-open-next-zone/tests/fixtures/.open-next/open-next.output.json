@@ -1,0 +1,43 @@
+{
+  "edgeFunctions": {},
+  "origins": {
+    "s3": {
+      "type": "s3",
+      "originPath": "_assets",
+      "copy": [
+        { "from": ".open-next/assets", "to": "_assets", "cached": true, "versionedSubDir": "_next" },
+        { "from": ".open-next/cache", "to": "_cache", "cached": false }
+      ]
+    },
+    "imageOptimizer": {
+      "type": "function",
+      "handler": "index.handler",
+      "bundle": ".open-next/image-optimization-function",
+      "streaming": false,
+      "imageLoader": "s3",
+      "wrapper": "aws-lambda",
+      "converter": "aws-apigw-v2"
+    },
+    "default": {
+      "type": "function",
+      "handler": "index.handler",
+      "bundle": ".open-next/server-functions/default",
+      "streaming": false,
+      "wrapper": "aws-lambda",
+      "converter": "aws-apigw-v2",
+      "queue": "sqs",
+      "incrementalCache": "s3",
+      "tagCache": "dynamodb"
+    }
+  },
+  "behaviors": [
+    { "pattern": "_next/image*", "origin": "imageOptimizer" },
+    { "pattern": "_next/data/*", "origin": "default" },
+    { "pattern": "*", "origin": "default" },
+    { "pattern": "_next/*", "origin": "s3" }
+  ],
+  "additionalProps": {
+    "revalidationFunction": { "handler": "index.handler", "bundle": ".open-next/revalidation-function" },
+    "warmer": { "handler": "index.handler", "bundle": ".open-next/warmer-function" }
+  }
+}

@@ -19,3 +19,7 @@ examples/*/backend.tf
 
 # Terragrunt
 .terragrunt-cache
+
+# Terraform tests and their OpenNext fixtures
+!modules/*/tests/*.tftest.hcl
+!modules/*/tests/fixtures/.open-next

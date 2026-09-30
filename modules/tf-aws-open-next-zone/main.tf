@@ -76,19 +76,19 @@ locals {
       connection_attempts = null
       connection_timeout  = null
     }
-    image_optimisation = {
-      domain_name         = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].url_hostnames)[local.staging_alias] : null
-      backend_name        = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].name) : null
-      arn                 = var.image_optimisation_function.create ? one(module.image_optimisation_function[*].arn) : null
+    },
+    var.image_optimisation_function.create ? { image_optimisation = {
+      domain_name         = one(module.image_optimisation_function[*].url_hostnames)[local.staging_alias]
+      backend_name        = one(module.image_optimisation_function[*].name)
+      arn                 = one(module.image_optimisation_function[*].arn)
       path                = null
       auth                = lookup(local.auth_options, var.image_optimisation_function.backend_deployment_type, null)
       headers             = null
-      keepalive_timeout   = var.image_optimisation_function.create ? try(coalesce(try(var.image_optimisation_function.origin_timeouts.keepalive_timeout, null), try(var.origin_timeouts.keepalive_timeout, null)), null) : null
-      read_timeout        = var.image_optimisation_function.create ? try(coalesce(try(var.image_optimisation_function.origin_timeouts.read_timeout, null), try(var.origin_timeouts.read_timeout, null)), null) : null
-      connection_attempts = var.image_optimisation_function.create ? try(coalesce(try(var.image_optimisation_function.origin_timeouts.connection_attempts, null), try(var.origin_timeouts.connection_attempts, null)), null) : null
-      connection_timeout  = var.image_optimisation_function.create ? try(coalesce(try(var.image_optimisation_function.origin_timeouts.connection_timeout, null), try(var.origin_timeouts.connection_timeout, null)), null) : null
-    }
-    },
+      keepalive_timeout   = try(coalesce(try(var.image_optimisation_function.origin_timeouts.keepalive_timeout, null), try(var.origin_timeouts.keepalive_timeout, null)), null)
+      read_timeout        = try(coalesce(try(var.image_optimisation_function.origin_timeouts.read_timeout, null), try(var.origin_timeouts.read_timeout, null)), null)
+      connection_attempts = try(coalesce(try(var.image_optimisation_function.origin_timeouts.connection_attempts, null), try(var.origin_timeouts.connection_attempts, null)), null)
+      connection_timeout  = try(coalesce(try(var.image_optimisation_function.origin_timeouts.connection_timeout, null), try(var.origin_timeouts.connection_timeout, null)), null)
+    } } : {},
     local.server_at_edge ? {} : { server = {
       domain_name         = lookup(module.server_function.url_hostnames, local.staging_alias, null)
       backend_name        = module.server_function.name
