@@ -462,7 +462,7 @@ module "server_function" {
 
   function_url = {
     create              = local.server_at_edge == false
-    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], lookup(local.auth_options, var.server_function.backend_deployment_type, null)), false) ? "AWS_IAM" : "NONE"
+    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], lookup(local.auth_options, var.server_function.backend_deployment_type, "")), false) ? "AWS_IAM" : "NONE"
     allow_any_principal = var.server_function.backend_deployment_type != "REGIONAL_LAMBDA_WITH_OAC"
     enable_streaming    = coalesce(var.server_function.enable_streaming, lookup(local.default_server_function, "streaming", false))
   }
@@ -553,7 +553,7 @@ module "additional_server_function" {
 
   function_url = {
     create              = true
-    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], lookup(local.auth_options, try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type), null)), false) ? "AWS_IAM" : "NONE"
+    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], lookup(local.auth_options, try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type), "")), false) ? "AWS_IAM" : "NONE"
     allow_any_principal = try(var.additional_server_functions.function_overrides[each.key].backend_deployment_type, var.additional_server_functions.backend_deployment_type) != "REGIONAL_LAMBDA_WITH_OAC"
     enable_streaming    = coalesce(try(var.additional_server_functions.function_overrides[each.key].enable_streaming, var.additional_server_functions.enable_streaming, null), try(each.value.streaming, null), false)
   }
@@ -729,7 +729,7 @@ module "image_optimisation_function" {
 
   function_url = {
     create              = true
-    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], lookup(local.auth_options, var.image_optimisation_function.backend_deployment_type, null)), false) ? "AWS_IAM" : "NONE"
+    authorization_type  = try(contains(["OAC", "AUTH_LAMBDA"], lookup(local.auth_options, var.image_optimisation_function.backend_deployment_type, "")), false) ? "AWS_IAM" : "NONE"
     allow_any_principal = var.image_optimisation_function.backend_deployment_type != "REGIONAL_LAMBDA_WITH_OAC"
   }
 
